@@ -680,6 +680,27 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
   )
 }
 
+/* Peças avulsas para composições (ex.: banner de divulgação) */
+export { TagChart, ALL_TAGS, DEFAULT_TAG, detectorScores, DETECTORS }
+
+export function BannerSunburst({ className }: { className?: string }) {
+  const { resolvedTheme } = useTheme()
+  const dark = resolvedTheme !== "light"
+  return (
+    <div className={className} aria-hidden>
+      <Canvas
+        camera={{ position: [0, 0, 6.6], fov: 45 }}
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true }}
+        frameloop="always"
+        style={{ pointerEvents: "none" }}
+      >
+        <SunburstScene dark={dark} motionOK={true} selected={DEFAULT_TAG} onSelect={() => {}} />
+      </Canvas>
+    </div>
+  )
+}
+
 /* Replay avulso — para usar fora do demo (ex.: página Sobre) */
 export function IncidentReplayShowcase() {
   const { resolvedTheme } = useTheme()

@@ -3,6 +3,9 @@ import { ImageResponse } from "next/og";
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
+// Símbolo solto, sem fundo — como o favicon da Google.
+// Dois tons garantem leitura nos dois temas de aba: o preenchimento
+// branco aparece no escuro, o contorno grafite aparece no claro.
 export default function Icon() {
   return new ImageResponse(
     (
@@ -10,100 +13,16 @@ export default function Icon() {
         style={{
           width: 64,
           height: 64,
-          background: "linear-gradient(135deg, #0f0f1a 0%, #1a1040 100%)",
-          borderRadius: 12,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          overflow: "hidden",
+          background: "transparent",
         }}
       >
-        {/* Neural network node dots */}
-        {/* Left layer nodes */}
-        <div
-          style={{
-            position: "absolute",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "rgba(99,102,241,0.7)",
-            top: 14,
-            left: 8,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "rgba(99,102,241,0.7)",
-            top: 30,
-            left: 8,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "rgba(99,102,241,0.7)",
-            top: 46,
-            left: 8,
-          }}
-        />
-        {/* Right layer nodes */}
-        <div
-          style={{
-            position: "absolute",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "rgba(168,85,247,0.7)",
-            top: 14,
-            right: 8,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "rgba(168,85,247,0.7)",
-            top: 30,
-            right: 8,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "rgba(168,85,247,0.7)",
-            top: 46,
-            right: 8,
-          }}
-        />
-
-        {/* NN text */}
-        <span
-          style={{
-            fontSize: 26,
-            fontWeight: 900,
-            letterSpacing: "-2px",
-            background: "linear-gradient(135deg, #818cf8 0%, #c084fc 100%)",
-            backgroundClip: "text",
-            color: "transparent",
-            fontFamily: "sans-serif",
-            lineHeight: 1,
-          }}
-        >
-          NN
-        </span>
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <path d="M16 16 L48 32 M16 48 L48 32 M16 16 L16 48" stroke="#8a8a8a" strokeWidth="4" fill="none" />
+          <circle cx="16" cy="16" r="9" fill="#ffffff" stroke="#3d3d3d" strokeWidth="3.5" />
+          <circle cx="16" cy="48" r="9" fill="#ffffff" stroke="#3d3d3d" strokeWidth="3.5" />
+          <circle cx="48" cy="32" r="10" fill="#ffffff" stroke="#3d3d3d" strokeWidth="3.5" />
+        </svg>
       </div>
     ),
     { ...size }
