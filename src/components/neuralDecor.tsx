@@ -20,8 +20,8 @@ export function NeuralCluster({
   nodes,
   edges,
   className = "",
-  nodeColor = "#6366f1",
-  edgeColor = "#818cf8",
+  nodeColor = "#8f8f8f",
+  edgeColor = "#ababab",
   size = 200,
   driftX = 6,
   driftY = 5,
@@ -69,8 +69,8 @@ export function NeuralCluster({
             key={i}
             cx={x}
             cy={y}
-            r={3.5}
             fill={nodeColor}
+            initial={{ r: 3.5 }}
             animate={{ r: [3.5, 5.5, 3.5] }}
             transition={{
               duration: 2.2,
@@ -92,8 +92,8 @@ export function HeroNeuralLeft({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={260}
-      nodeColor="#6366f1"
-      edgeColor="#818cf8"
+      nodeColor="#8f8f8f"
+      edgeColor="#ababab"
       driftX={8} driftY={6} driftDuration={16}
       nodes={[
         { x: 20, y: 40 }, { x: 60, y: 20 }, { x: 100, y: 60 },
@@ -109,8 +109,8 @@ export function HeroNeuralRight({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={220}
-      nodeColor="#a855f7"
-      edgeColor="#c084fc"
+      nodeColor="#9a9a9a"
+      edgeColor="#b5b5b5"
       driftX={10} driftY={7} driftDuration={13}
       nodes={[
         { x: 180, y: 30 }, { x: 140, y: 70 }, { x: 190, y: 100 },
@@ -126,8 +126,8 @@ export function MidNeuralLeft({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={300}
-      nodeColor="#4f46e5"
-      edgeColor="#6366f1"
+      nodeColor="#7a7a7a"
+      edgeColor="#8f8f8f"
       driftX={7} driftY={9} driftDuration={20}
       nodes={[
         { x: 30, y: 50 }, { x: 80, y: 20 }, { x: 140, y: 60 },
@@ -143,8 +143,8 @@ export function MidNeuralRight({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={280}
-      nodeColor="#7c3aed"
-      edgeColor="#a78bfa"
+      nodeColor="#8f8f8f"
+      edgeColor="#b0b0b0"
       driftX={11} driftY={8} driftDuration={15}
       nodes={[
         { x: 250, y: 40 }, { x: 200, y: 90 }, { x: 260, y: 130 },
@@ -160,8 +160,8 @@ export function BottomNeural({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={340}
-      nodeColor="#6366f1"
-      edgeColor="#818cf8"
+      nodeColor="#8f8f8f"
+      edgeColor="#ababab"
       driftX={6} driftY={11} driftDuration={22}
       nodes={[
         { x: 30, y: 80 }, { x: 100, y: 30 }, { x: 170, y: 90 },
@@ -178,8 +178,8 @@ export function DeepNeural({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={420}
-      nodeColor="#6366f1"
-      edgeColor="#818cf8"
+      nodeColor="#8f8f8f"
+      edgeColor="#ababab"
       driftX={12} driftY={8} driftDuration={24}
       nodes={[
         { x: 30, y: 80 }, { x: 30, y: 160 }, { x: 30, y: 240 }, { x: 30, y: 320 },
@@ -203,8 +203,8 @@ export function LSTMNeural({ className = "" }: { className?: string }) {
     <NeuralCluster
       className={className}
       size={360}
-      nodeColor="#8b5cf6"
-      edgeColor="#a78bfa"
+      nodeColor="#999999"
+      edgeColor="#b0b0b0"
       driftX={9} driftY={12} driftDuration={19}
       nodes={[
         { x: 40, y: 60 }, { x: 120, y: 30 }, { x: 200, y: 70 },

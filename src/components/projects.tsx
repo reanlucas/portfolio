@@ -1,47 +1,57 @@
 "use client"
-import * as motion from "motion/react-client"
-import { Separator } from "./ui/separator"
+import { motion } from "motion/react"
 import { HeroNeuralLeft, MidNeuralRight, LSTMNeural, DeepNeural } from "@/components/neuralDecor"
-import { FaLock, FaPython } from "react-icons/fa";
+import { FaLock, FaPython, FaWhatsapp } from "react-icons/fa";
 import { VscCode } from "react-icons/vsc";
-import { SiFlask, SiPytorch, SiNumpy, SiPlotly } from "react-icons/si";
+import { SiPytorch, SiPlotly, SiGooglecloud, SiTerraform } from "react-icons/si";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-import { ElementType } from "react";
+import { ArrowRight } from "lucide-react";
+import { ComponentType } from "react";
+import { RevealGroup, RevealItem, SectionTitle } from "@/components/motion/primitives";
 
 type Project = {
   title: string
   category: string
   description: string
-  icons: { Icon: ElementType, label: string }[]
-  githubUrl: string
-  hasSource: boolean
+  icons: { Icon: ComponentType<{ size?: number | string; className?: string }>, label: string }[]
+  badge?: string
+  caseHref?: string
 }
 
 const projects: Project[] = [
   {
-    title: "Detecção de Anomalias Industriais",
-    category: "Machine Learning / IoT",
+    title: "Plataforma de Gestão de Ativos e Riscos",
+    category: "Deep Learning · Setor Elétrico",
+    badge: "Em produção",
     description:
-      "Sistema de monitoramento preditivo não-supervisionado baseado em LSTM Autoencoder implementado em PyTorch para detecção de falhas em equipamentos industriais. O encoder comprime séries temporais multivariadas de vibração, temperatura e corrente elétrica em representação latente de baixa dimensão; o decoder as reconstrói, e desvios no erro de reconstrução (MSE) acima do limiar percentil calibrado sinalizam anomalia iminente. API REST em Flask serve inferência em tempo real e persiste histórico de eventos detectados. Frontend interativo em Plotly exibe dashboards com séries temporais sobrepostas ao envelope de normalidade, heatmaps do erro de reconstrução por canal e alertas dinâmicos. Pré-processamento, janelamento temporal e feature engineering realizados com NumPy.",
+      "Plataforma em nuvem (GCP + AlloyDB) que vigia ativos de UHEs e subestações de uma das maiores companhias de energia do Brasil, 24/7. Detecção por IA — redes neurais recorrentes e convolucionais — validada por modelos clássicos (Random Forest, KNN) num ensemble que dá score de risco por tag de telemetria, tudo integrado ao ecossistema corporativo: SAP, Hitachi NM, Oracle SQL, Keycloak, data lakes e Denodo. A falha é sinalizada antes de acontecer.",
     icons: [
       { Icon: FaPython, label: "Python" },
       { Icon: SiPytorch, label: "PyTorch" },
-      { Icon: SiFlask, label: "Flask" },
+      { Icon: SiGooglecloud, label: "GCP · AlloyDB" },
+      { Icon: SiTerraform, label: "Terraform" },
       { Icon: SiPlotly, label: "Plotly" },
-      { Icon: SiNumpy, label: "NumPy" },
     ],
-    githubUrl: "",
-    hasSource: false,
+    caseHref: "/projetos",
+  },
+  {
+    title: "Agente de IA & LLMs",
+    category: "IA Generativa · Vertex AI",
+    description:
+      "Agente de IA com LLM integrado ao Vertex AI e a modelos open source servidos em infraestrutura própria — roteamento por custo, latência e sensibilidade do dado. Responde sobre ativos e risco em linguagem natural via function calling e RAG, e é o mesmo agente que dispara alertas de anomalia por WhatsApp e e-mail para a equipe de manutenção.",
+    icons: [
+      { Icon: SiGooglecloud, label: "Vertex AI" },
+      { Icon: FaPython, label: "Python" },
+      { Icon: FaWhatsapp, label: "Alertas WhatsApp" },
+    ],
+    caseHref: "/projetos",
   },
   {
     title: "Outros Projetos",
     category: "Confidencial",
     description:
-      "Os outros projetos são confidenciais e não podem ser disponibilizados por questões tanto éticas quanto profissionais. Entre em contato para mais informações.",
+      "O que constrói vantagem competitiva de verdade raramente pode ir para o GitHub. Os demais projetos — integrações industriais, pipelines de dados e automações em ambiente crítico — são confidenciais por dever ético e profissional. Quer saber como esse tipo de sistema funciona por dentro? Me chama e conversamos até onde a confidencialidade permite.",
     icons: [{ Icon: VscCode, label: "Código" }],
-    githubUrl: "",
-    hasSource: false,
   },
 ]
 
@@ -52,77 +62,78 @@ export default function Projects() {
       <MidNeuralRight className="absolute -right-10 bottom-0 w-72 md:w-[28rem] dark:opacity-[0.20] opacity-[0.25] pointer-events-none" />
       <LSTMNeural className="absolute left-1/4 top-1/2 w-64 md:w-[26rem] dark:opacity-[0.14] opacity-[0.18] pointer-events-none" />
       <DeepNeural className="absolute right-1/4 -bottom-10 w-72 md:w-[30rem] dark:opacity-[0.14] opacity-[0.18] pointer-events-none" />
-      <motion.div
-        initial={{ y: 50 }}
-        whileInView={{ y: 0 }}
-        transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-        viewport={{ once: true, margin: "-100px" }}
-        className="max-w-7xl w-full mx-auto flex flex-col gap-6 px-6 py-10"
-      >
-        <Separator orientation="horizontal" className="dark:bg-white/20 bg-black/10 h-[1px] w-full" />
-        <h2 className="text-3xl font-bold">Meus Projetos</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {projects.map((project, index) => (
-            <motion.div
-              key={index}
-              initial={{ y: 50 }}
-              whileInView={{ y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ delay: index * 0.15, duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
-              whileHover={{ y: -6, transition: { duration: 0.25, ease: "easeOut" } }}
-              className="group relative rounded-2xl border border-border dark:border-white/10 bg-muted/40 dark:bg-white/5 p-6 flex flex-col gap-4 overflow-hidden"
-            >
-              {/* Hover accent */}
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+      <div className="max-w-7xl w-full mx-auto flex flex-col gap-8 px-6 py-10 relative">
+        <SectionTitle index="04" overline="Trabalho" title="Meus Projetos" />
 
-              {/* Header */}
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-                    {project.category}
-                  </span>
-                  <h3 className="text-xl font-semibold mt-0.5">{project.title}</h3>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end max-w-[140px]">
-                  {project.icons.map(({ Icon, label }, i) => (
-                    <div
-                      key={i}
-                      title={label}
-                      className="p-2 rounded-lg dark:bg-white/8 bg-black/5 hover:bg-accent transition-colors cursor-default"
-                    >
-                      <Icon size={15} />
+        <RevealGroup className="grid grid-cols-1 md:grid-cols-2 gap-6" stagger={0.15}>
+          {projects.map((project) => (
+            <RevealItem key={project.title} className="h-full">
+              <motion.div
+                whileHover={{ y: -6 }}
+                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                className="group relative h-full rounded-none border border-border dark:border-white/10 bg-muted/40 dark:bg-white/5 p-6 flex flex-col gap-4 overflow-hidden"
+              >
+                {/* Acento no hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-none pointer-events-none" />
+
+                {/* Cabeçalho */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                        {project.category}
+                      </span>
+                      {project.badge && (
+                        <span className="inline-flex items-center gap-1.5 rounded-none border border-border bg-muted/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          </span>
+                          {project.badge}
+                        </span>
+                      )}
                     </div>
-                  ))}
+                    <h3 className="font-display text-xl font-bold mt-1">{project.title}</h3>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end max-w-[140px]">
+                    {project.icons.map(({ Icon, label }, i) => (
+                      <div
+                        key={i}
+                        title={label}
+                        className="p-2 rounded-lg dark:bg-white/8 bg-black/5 hover:bg-accent transition-colors cursor-default"
+                      >
+                        <Icon size={15} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <Separator className="dark:bg-white/10 bg-black/10 h-[1px]" />
+                <div className="h-px w-full dark:bg-white/10 bg-black/10" />
 
-              <p className="text-sm text-muted-foreground leading-7 flex-1">
-                {project.description}
-              </p>
+                <p className="text-sm text-muted-foreground leading-7 flex-1">
+                  {project.description}
+                </p>
 
-              {project.hasSource ? (
-                <Link
-                  href={project.githubUrl}
-                  target="_blank"
-                  className="flex items-center gap-2 w-fit text-sm font-medium hover:underline underline-offset-4 mt-auto group/link"
-                >
-                  <ExternalLink size={14} />
-                  Ver no GitHub
-                  <ExternalLink size={12} className="opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                </Link>
-              ) : (
-                <div className="flex items-center gap-2 w-fit text-sm text-muted-foreground mt-auto">
-                  <FaLock size={13} />
-                  Código privado
-                </div>
-              )}
-            </motion.div>
+                {project.caseHref ? (
+                  <Link
+                    href={project.caseHref}
+                    className="group/link inline-flex items-center gap-2 w-fit text-sm font-medium text-foreground hover:underline underline-offset-4 mt-auto"
+                  >
+                    Estudo de caso completo
+                    <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform duration-200" />
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-2 w-fit text-sm text-muted-foreground mt-auto">
+                    <FaLock size={13} />
+                    Código privado
+                  </div>
+                )}
+              </motion.div>
+            </RevealItem>
           ))}
-        </div>
-      </motion.div>
+        </RevealGroup>
+      </div>
     </div>
   )
 }
