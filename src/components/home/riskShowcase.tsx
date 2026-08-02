@@ -13,9 +13,9 @@ export default function RiskShowcase() {
 
         <Reveal>
           <p className="text-muted-foreground leading-8 max-w-3xl">
-            Usinas hidrelétricas e subestações concentram os ativos mais caros do setor elétrico.
-            A plataforma que desenvolvo consolida tudo numa hierarquia navegável — empresa, ativo,
-            tag — com detecção por redes neurais validada por ML clássico.
+            Usinas e subestações concentram os ativos mais caros do setor elétrico.
+            A plataforma consolida tudo numa hierarquia navegável — empresa → ativo →
+            equipamento → tag — com saúde por ativo e detecção neural validada por ML clássico.
             <span className="text-foreground font-medium"> Clique numa tag do sunburst</span> e
             veja a predição do modelo contra o valor real do sensor.
           </p>

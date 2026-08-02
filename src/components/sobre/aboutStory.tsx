@@ -157,9 +157,9 @@ export default function AboutStory() {
               <span className="text-muted-foreground">rede neural em produção</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground leading-8 max-w-3xl">
-              Sou o Rean Lucas — engenheiro de software e especialista em redes neurais.
-              Minha especialidade é o trecho do caminho onde a maioria dos projetos de IA morre:
-              tirar o modelo do notebook e colocá-lo em produção, vigiando ativos críticos, 24 horas por dia.
+              Sou o Rean Lucas — engenheiro de machine learning. Atuo no trecho onde a
+              maioria dos projetos de IA morre: tirar o modelo do notebook e colocá-lo em
+              produção, vigiando ativos críticos 24 horas por dia.
             </p>
           </Reveal>
         </header>
@@ -174,11 +174,10 @@ export default function AboutStory() {
                   Para o time técnico
                 </p>
                 <p className="leading-8 text-muted-foreground">
-                  Eu não &quot;uso&quot; deep learning — eu arquiteto. LSTM Autoencoder para séries temporais
-                  multivariadas com limiar percentil calibrado por equipamento; janelamento e feature
-                  engineering em NumPy; inferência servida em Flask; visualização em Plotly. E quando o
-                  assunto muda para web, falo TypeScript, Next.js e PostgreSQL sem trocar de sotaque.
-                  Code review comigo é conversa entre pares, do backprop ao backend.
+                  Arquiteto, não só uso: LSTM Autoencoder com limiar calibrado por equipamento,
+                  ensemble com Random Forest e KNN antes de qualquer alerta, features em NumPy,
+                  serving em Flask na GCP, front em TypeScript/Next.js. Code review comigo é
+                  conversa entre pares — do backprop ao backend.
                 </p>
               </div>
             </RevealItem>
@@ -188,11 +187,10 @@ export default function AboutStory() {
                   Para executivos
                 </p>
                 <p className="leading-8 text-muted-foreground">
-                  Falha não planejada em ativo crítico é o custo mais caro que existe: emergência,
-                  indisponibilidade, multa regulatória, risco. Meu trabalho transforma esse risco em
-                  antecipação — o sistema avisa antes de o equipamento falhar, e a manutenção vira
-                  agenda em vez de crise. Uma pessoa que domina a stack inteira significa menos
-                  handoffs, menos ruído e entrega mais rápida.
+                  Falha não planejada é o custo mais caro do setor: emergência, indisponibilidade,
+                  multa. Meu sistema converte esse risco em aviso com dias de antecedência —
+                  manutenção vira agenda, não crise. Um profissional cobrindo modelo, plataforma e
+                  integração: menos handoff, entrega mais rápida.
                 </p>
               </div>
             </RevealItem>

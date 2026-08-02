@@ -11,7 +11,8 @@ import { Reveal } from "@/components/motion/primitives"
 
 /*
   Demo interativa do monitoramento — dados ilustrativos.
-  Sunburst 3D: empresa (centro) → ativos → tags de telemetria.
+  Sunburst 3D em quatro níveis: empresa (centro) → ativos (UHEs e SEs, com
+  KPI de saúde) → equipamentos → tags de telemetria.
   Clique numa tag: o painel mostra predição × valor real e o gráfico
   redesenha a série daquela tag (real contínuo, predição pontilhada).
 */
@@ -19,46 +20,113 @@ import { Reveal } from "@/components/motion/primitives"
 type Risk = "baixo" | "atencao" | "critico"
 
 type Tag = { id: string; name: string; unit: string; real: number; pred: number; risk: Risk }
-type Asset = { name: string; tags: Tag[] }
+type Equipment = { id: string; name: string; tags: Tag[] }
+type Asset = { id: string; name: string; kind: "UHE" | "SE"; health: number; equipment: Equipment[] }
 
 const COMPANY = "ENERGIA S.A."
 
 const ASSETS: Asset[] = [
   {
-    name: "Trafo 01",
-    tags: [
-      { id: "t1-oleo", name: "Temp. Óleo", unit: "°C", real: 74.6, pred: 62.1, risk: "critico" },
-      { id: "t1-corr", name: "Corrente", unit: "A", real: 409, pred: 402, risk: "baixo" },
-      { id: "t1-enrol", name: "Temp. Enrolamento", unit: "°C", real: 68.9, pred: 67.5, risk: "baixo" },
+    id: "uhe-salto", name: "UHE Salto das Pedras", kind: "UHE", health: 96,
+    equipment: [
+      {
+        id: "sp-ger", name: "Gerador 01", tags: [
+          { id: "sp-estator", name: "Temp. Estator", unit: "°C", real: 55.1, pred: 54.2, risk: "baixo" },
+          { id: "sp-exc", name: "Corrente Excitação", unit: "A", real: 118, pred: 116, risk: "baixo" },
+        ],
+      },
+      {
+        id: "sp-turb", name: "Turbina 01", tags: [
+          { id: "sp-vib", name: "Vibração Eixo", unit: "mm/s", real: 2.2, pred: 2.1, risk: "baixo" },
+          { id: "sp-press", name: "Pressão Espiral", unit: "kPa", real: 412, pred: 410, risk: "baixo" },
+        ],
+      },
+      {
+        id: "sp-mancal", name: "Mancal Guia", tags: [
+          { id: "sp-mtemp", name: "Temp. Mancal", unit: "°C", real: 61.4, pred: 60.8, risk: "baixo" },
+        ],
+      },
     ],
   },
   {
-    name: "Gerador 02",
-    tags: [
-      { id: "g2-vib", name: "Vibração", unit: "mm/s", real: 4.6, pred: 3.4, risk: "atencao" },
-      { id: "g2-estator", name: "Temp. Estator", unit: "°C", real: 55.1, pred: 54.2, risk: "baixo" },
-      { id: "g2-exc", name: "Corrente Excitação", unit: "A", real: 118, pred: 116, risk: "baixo" },
+    id: "uhe-rio", name: "UHE Rio Bonito", kind: "UHE", health: 71,
+    equipment: [
+      {
+        id: "rb-trafo", name: "Trafo Elevador 01", tags: [
+          { id: "t1-oleo", name: "Temp. Óleo", unit: "°C", real: 74.6, pred: 62.1, risk: "critico" },
+          { id: "t1-enrol", name: "Temp. Enrolamento", unit: "°C", real: 68.9, pred: 67.5, risk: "baixo" },
+          { id: "t1-corr", name: "Corrente", unit: "A", real: 409, pred: 402, risk: "baixo" },
+        ],
+      },
+      {
+        id: "rb-ger", name: "Gerador 02", tags: [
+          { id: "g2-vib", name: "Vibração", unit: "mm/s", real: 4.6, pred: 3.4, risk: "atencao" },
+          { id: "g2-estator", name: "Temp. Estator", unit: "°C", real: 56.3, pred: 55.9, risk: "baixo" },
+        ],
+      },
     ],
   },
   {
-    name: "Mancal LA 03",
-    tags: [
-      { id: "m3-temp", name: "Temp. Mancal", unit: "°C", real: 82.3, pred: 79.6, risk: "atencao" },
-      { id: "m3-vax", name: "Vib. Axial", unit: "mm/s", real: 2.1, pred: 2.0, risk: "baixo" },
-      { id: "m3-vrad", name: "Vib. Radial", unit: "mm/s", real: 2.4, pred: 2.3, risk: "baixo" },
+    id: "uhe-serra", name: "UHE Serra Azul", kind: "UHE", health: 93,
+    equipment: [
+      {
+        id: "sa-turb", name: "Turbina 02", tags: [
+          { id: "sa-vib", name: "Vibração Eixo", unit: "mm/s", real: 2.8, pred: 2.6, risk: "baixo" },
+          { id: "sa-cav", name: "Índice Cavitação", unit: "", real: 0.31, pred: 0.28, risk: "baixo" },
+        ],
+      },
+      {
+        id: "sa-mancal", name: "Mancal LA 03", tags: [
+          { id: "m3-temp", name: "Temp. Mancal", unit: "°C", real: 82.3, pred: 79.6, risk: "atencao" },
+          { id: "m3-vrad", name: "Vib. Radial", unit: "mm/s", real: 2.4, pred: 2.3, risk: "baixo" },
+        ],
+      },
     ],
   },
   {
-    name: "Trafo 02",
-    tags: [
-      { id: "t2-oleo", name: "Temp. Óleo", unit: "°C", real: 58.4, pred: 58.0, risk: "baixo" },
-      { id: "t2-corr", name: "Corrente", unit: "A", real: 385, pred: 383, risk: "baixo" },
-      { id: "t2-enrol", name: "Temp. Enrolamento", unit: "°C", real: 61.2, pred: 60.8, risk: "baixo" },
+    id: "se-vale", name: "SE Vale do Ferro", kind: "SE", health: 91,
+    equipment: [
+      {
+        id: "vf-trafo", name: "Trafo 02", tags: [
+          { id: "t2-oleo", name: "Temp. Óleo", unit: "°C", real: 58.4, pred: 58.0, risk: "baixo" },
+          { id: "t2-corr", name: "Corrente", unit: "A", real: 385, pred: 383, risk: "baixo" },
+        ],
+      },
+      {
+        id: "vf-disj", name: "Disjuntor 152-8", tags: [
+          { id: "vf-sf6", name: "Pressão SF₆", unit: "bar", real: 6.1, pred: 6.1, risk: "baixo" },
+          { id: "vf-ab", name: "Tempo Abertura", unit: "ms", real: 38, pred: 36, risk: "baixo" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "se-porto", name: "SE Porto Norte", kind: "SE", health: 82,
+    equipment: [
+      {
+        id: "pn-trafo", name: "Trafo 03", tags: [
+          { id: "pn-oleo", name: "Temp. Óleo", unit: "°C", real: 66.2, pred: 61.9, risk: "atencao" },
+          { id: "pn-corr", name: "Corrente", unit: "A", real: 348, pred: 344, risk: "baixo" },
+        ],
+      },
+      {
+        id: "pn-pr", name: "Para-raios 04", tags: [
+          { id: "pn-fuga", name: "Corrente de Fuga", unit: "mA", real: 0.9, pred: 0.6, risk: "atencao" },
+        ],
+      },
+      {
+        id: "pn-cap", name: "Banco Capacitores", tags: [
+          { id: "pn-des", name: "Desequilíbrio", unit: "A", real: 1.8, pred: 1.7, risk: "baixo" },
+        ],
+      },
     ],
   },
 ]
 
-const ALL_TAGS = ASSETS.flatMap((a) => a.tags.map((t) => ({ ...t, asset: a.name })))
+const ALL_TAGS = ASSETS.flatMap((a) =>
+  a.equipment.flatMap((e) => e.tags.map((t) => ({ ...t, asset: `${a.name} · ${e.name}` })))
+)
+const EQUIPMENT_COUNT = ASSETS.reduce((s, a) => s + a.equipment.length, 0)
 const DEFAULT_TAG = "t1-oleo"
 
 function riskColor(risk: Risk, dark: boolean) {
@@ -67,7 +135,18 @@ function riskColor(risk: Risk, dark: boolean) {
   return dark ? "#525252" : "#a3a3a3"
 }
 
+/** saúde do ativo → mesma semântica de cor do risco */
+function healthColor(health: number, dark: boolean) {
+  if (health < 75) return dark ? "#ef4444" : "#dc2626"
+  if (health < 90) return dark ? "#f59e0b" : "#d97706"
+  return dark ? "#3f3f3f" : "#d4d4d4"
+}
+
 const riskLabel: Record<Risk, string> = { baixo: "Baixo risco", atencao: "Atenção", critico: "Crítico" }
+
+const RISK_ORDER: Record<Risk, number> = { baixo: 0, atencao: 1, critico: 2 }
+const maxRisk = (tags: Tag[]): Risk =>
+  tags.reduce<Risk>((m, t) => (RISK_ORDER[t.risk] > RISK_ORDER[m] ? t.risk : m), "baixo")
 
 /* ─── Séries determinísticas por tag: predição do modelo × valor real ──── */
 
@@ -101,7 +180,7 @@ function tagSeries(tag: Tag) {
   return { pred, real }
 }
 
-/* ─── Sunburst 3D clicável ─────────────────────────────────────────────── */
+/* ─── Sunburst 3D em quatro níveis, clicável ───────────────────────────── */
 
 type Segment = {
   r0: number
@@ -110,53 +189,122 @@ type Segment = {
   a1: number
   depth: number
   color: string
+  level: 0 | 1 | 2
   tagId?: string
 }
 
-const GAP = 0.024
+const TWO_PI = Math.PI * 2
+const TOTAL_TAGS = ALL_TAGS.length
 
+// raios dos anéis: ativo (com saúde) → equipamento → tag
+const RING = {
+  asset: { r0: 0.62, r1: 1.14, gap: 0.03 },
+  equip: { r0: 1.22, r1: 1.8, gap: 0.022 },
+  tag: { r0: 1.88, r1: 2.62, gap: 0.018 },
+}
+
+function mixHex(a: string, b: string, t: number) {
+  return `#${new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString()}`
+}
+
+/** ângulos proporcionais à contagem de tags — fatias de tag com largura uniforme */
 function buildSegments(dark: boolean): Segment[] {
   const segs: Segment[] = []
-  const TWO_PI = Math.PI * 2
-  const assetArc = TWO_PI / ASSETS.length
+  const grayEq = dark ? "#4a4a4a" : "#c6c6c6"
+  let cursor = 0
 
-  ASSETS.forEach((asset, ai) => {
-    const a0 = ai * assetArc
+  ASSETS.forEach((asset) => {
+    const assetTags = asset.equipment.reduce((s, e) => s + e.tags.length, 0)
+    const assetArc = (TWO_PI * assetTags) / TOTAL_TAGS
+
     segs.push({
-      r0: 0.72, r1: 1.5, a0: a0 + GAP, a1: a0 + assetArc - GAP,
-      depth: 0.1,
-      color: dark ? "#454545" : "#cfcfcf",
+      ...RING.asset,
+      a0: cursor + RING.asset.gap,
+      a1: cursor + assetArc - RING.asset.gap,
+      depth: 0.12 + ((100 - asset.health) / 100) * 0.55,
+      color: healthColor(asset.health, dark),
+      level: 0,
     })
 
-    const tagArc = assetArc / asset.tags.length
-    asset.tags.forEach((tag, ti) => {
-      const t0 = a0 + ti * tagArc
+    let eqCursor = cursor
+    asset.equipment.forEach((eq) => {
+      const eqArc = (assetArc * eq.tags.length) / assetTags
+      const worst = maxRisk(eq.tags)
       segs.push({
-        r0: 1.6, r1: 2.45, a0: t0 + GAP, a1: t0 + tagArc - GAP,
-        depth: tag.risk === "critico" ? 0.4 : tag.risk === "atencao" ? 0.26 : 0.14,
-        color: riskColor(tag.risk, dark),
-        tagId: tag.id,
+        ...RING.equip,
+        a0: eqCursor + RING.equip.gap,
+        a1: eqCursor + eqArc - RING.equip.gap,
+        depth: worst === "baixo" ? 0.12 : 0.18,
+        // equipamento herda um tom do pior risco dos filhos — o olho sobe a hierarquia
+        color: worst === "baixo" ? grayEq : mixHex(grayEq, riskColor(worst, dark), 0.45),
+        level: 1,
       })
+
+      const tagArc = eqArc / eq.tags.length
+      eq.tags.forEach((tag, ti) => {
+        const t0 = eqCursor + ti * tagArc
+        segs.push({
+          ...RING.tag,
+          a0: t0 + RING.tag.gap,
+          a1: t0 + tagArc - RING.tag.gap,
+          depth: tag.risk === "critico" ? 0.46 : tag.risk === "atencao" ? 0.28 : 0.14,
+          color: riskColor(tag.risk, dark),
+          level: 2,
+          tagId: tag.id,
+        })
+      })
+      eqCursor += eqArc
     })
+    cursor += assetArc
   })
 
   return segs
+}
+
+/** âncora do rótulo de saúde de cada ativo — logo além do anel de tags */
+function assetAnchors() {
+  let cursor = 0
+  return ASSETS.map((asset) => {
+    const assetTags = asset.equipment.reduce((s, e) => s + e.tags.length, 0)
+    const arc = (TWO_PI * assetTags) / TOTAL_TAGS
+    const mid = cursor + arc / 2
+    cursor += arc
+    return { id: asset.id, pos: new THREE.Vector3(Math.cos(mid) * 3.2, Math.sin(mid) * 3.2, 0.12) }
+  })
 }
 
 function arcGeometry(seg: Segment) {
   const shape = new THREE.Shape()
   shape.absarc(0, 0, seg.r1, seg.a0, seg.a1, false)
   shape.absarc(0, 0, seg.r0, seg.a1, seg.a0, true)
-  return new THREE.ExtrudeGeometry(shape, { depth: seg.depth, bevelEnabled: false, curveSegments: 20 })
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: seg.depth,
+    curveSegments: 24,
+    bevelEnabled: true,
+    bevelThickness: 0.02,
+    bevelSize: 0.012,
+    bevelSegments: 2,
+  })
+}
+
+function SunburstLights({ dark }: { dark: boolean }) {
+  return (
+    <>
+      <ambientLight intensity={dark ? 1.15 : 1.3} />
+      <directionalLight position={[4, 6, 8]} intensity={dark ? 1.3 : 1.1} />
+      <directionalLight position={[-5, -4, 5]} intensity={0.45} />
+    </>
+  )
 }
 
 function SunburstScene({
-  dark, motionOK, selected, onSelect,
+  dark, motionOK, selected, onSelect, labelRefs,
 }: {
   dark: boolean
   motionOK: boolean
   selected: string
   onSelect: (id: string) => void
+  labelRefs?: RefObject<Map<string, HTMLDivElement | null>>
 }) {
   const group = useRef<THREE.Group>(null)
   const meshes = useRef(new Map<string, THREE.Mesh>())
@@ -164,6 +312,8 @@ function SunburstScene({
 
   const segments = useMemo(() => buildSegments(dark), [dark])
   const geometries = useMemo(() => segments.map(arcGeometry), [segments])
+  const anchors = useMemo(assetAnchors, [])
+  const proj = useMemo(() => new THREE.Vector3(), [])
   useEffect(() => () => geometries.forEach((g) => g.dispose()), [geometries])
 
   useEffect(() => {
@@ -180,12 +330,25 @@ function SunburstScene({
     }
     // tag selecionada levanta do plano; as demais assentam
     meshes.current.forEach((mesh, id) => {
-      const target = id === selected ? 0.28 : id === hovered ? 0.12 : 0
+      const target = id === selected ? 0.3 : id === hovered ? 0.14 : 0
       mesh.position.z += (target - mesh.position.z) * Math.min(1, dt * 8)
-      const mat = mesh.material as THREE.MeshBasicMaterial
+      const mat = mesh.material as THREE.MeshStandardMaterial
       const pulse = id === selected && motionOK ? 0.75 + 0.25 * Math.sin(t * 2.4) : 1
-      mat.opacity = (id === selected || id === hovered ? 1 : 0.88) * pulse
+      mat.opacity = (id === selected || id === hovered ? 1 : 0.9) * pulse
     })
+    // rótulos de saúde acompanham o giro — projeção 3D → tela
+    if (labelRefs?.current) {
+      group.current.updateMatrixWorld()
+      anchors.forEach(({ id, pos }) => {
+        const el = labelRefs.current!.get(id)
+        if (!el) return
+        proj.copy(pos).applyMatrix4(group.current!.matrixWorld).project(state.camera)
+        const x = (proj.x * 0.5 + 0.5) * state.size.width
+        const y = (-proj.y * 0.5 + 0.5) * state.size.height
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`
+        el.style.opacity = proj.z < 1 ? "1" : "0"
+      })
+    }
   })
 
   const handleClick = useCallback((tagId: string) => (e: ThreeEvent<MouseEvent>) => {
@@ -195,6 +358,7 @@ function SunburstScene({
 
   return (
     <group ref={group} rotation={[-0.95, 0, 0.4]}>
+      <SunburstLights dark={dark} />
       {segments.map((seg, i) => (
         <mesh
           key={i}
@@ -209,15 +373,50 @@ function SunburstScene({
           onPointerOver={seg.tagId ? (e) => { e.stopPropagation(); setHovered(seg.tagId!) } : undefined}
           onPointerOut={seg.tagId ? () => setHovered((h) => (h === seg.tagId ? null : h)) : undefined}
         >
-          <meshBasicMaterial color={seg.color} transparent opacity={0.9} side={THREE.DoubleSide} />
+          <meshStandardMaterial
+            color={seg.color}
+            roughness={0.48}
+            metalness={0.22}
+            transparent
+            opacity={seg.level === 2 ? 0.92 : 0.96}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       ))}
       {/* núcleo — a empresa */}
-      <mesh>
-        <cylinderGeometry args={[0.52, 0.52, 0.06, 40]} />
-        <meshBasicMaterial color={dark ? "#1f1f1f" : "#e8e8e8"} />
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.5, 0.5, 0.1, 48]} />
+        <meshStandardMaterial color={dark ? "#242424" : "#e6e6e6"} roughness={0.4} metalness={0.3} />
       </mesh>
     </group>
+  )
+}
+
+/** rótulos DOM dos ativos (nome + saúde) — posicionados pela cena a cada frame */
+function AssetHealthLabels({ dark, labelRefs }: { dark: boolean; labelRefs: RefObject<Map<string, HTMLDivElement | null>> }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {ASSETS.map((a) => (
+        <div
+          key={a.id}
+          ref={(el) => { labelRefs.current.set(a.id, el) }}
+          className="absolute left-0 top-0 will-change-transform"
+          style={{ transform: "translate3d(-999px,-999px,0)", opacity: 0 }}
+        >
+          <div className="-translate-x-1/2 -translate-y-1/2 whitespace-nowrap border border-border/70 dark:border-white/15 bg-background/80 backdrop-blur-[2px] px-2 py-1">
+            <span className="font-mono text-[8.5px] uppercase tracking-[0.15em] text-muted-foreground">
+              {a.name}
+            </span>
+            <span
+              className="font-mono text-[9px] font-bold ml-1.5"
+              style={{ color: a.health < 90 ? healthColor(a.health, dark) : "var(--foreground)" }}
+            >
+              {a.health}%
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -238,7 +437,7 @@ function TagChart({ tag }: { tag: Tag & { asset: string } }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img"
-      aria-label={`Gráfico ilustrativo: predição do modelo (pontilhada) versus valor real da tag ${tag.name} do ativo ${tag.asset}`}>
+      aria-label={`Gráfico ilustrativo: predição do modelo (pontilhada) versus valor real da tag ${tag.name} de ${tag.asset}`}>
       {ticks.map((v) => (
         <g key={v}>
           <line x1={PL} x2={W - PR} y1={py(v)} y2={py(v)} stroke="currentColor" strokeOpacity="0.08" />
@@ -428,7 +627,7 @@ const replaySeries = (() => {
 })()
 
 const WPP_MESSAGE =
-  "⚠️ ALERTA — Trafo 02 · Temp. Óleo\n" +
+  "⚠️ ALERTA — SE Vale do Ferro · Trafo 02 · Temp. Óleo\n" +
   "Real 68.5°C vs predição 58.0°C (+18%) nas últimas horas. " +
   "Ensemble 3/3 em consenso (LSTM-AE · KNN · RF).\n" +
   "Sugestão: inspecionar o sistema de refrigeração e abrir OS preventiva.\n" +
@@ -456,7 +655,7 @@ function ReplayScene({ dark, tRef }: { dark: boolean; tRef: RefObject<number> })
       // o segmento da tag cresce e muda de cor conforme o desvio piora
       const grow = Math.min(1, Math.max(0, (t - 3) / 5.5))
       target.current.scale.z = 1 + grow * 2.6
-      const mat = target.current.material as THREE.MeshBasicMaterial
+      const mat = target.current.material as THREE.MeshStandardMaterial
       if (grow < 0.5) mat.color.copy(gray).lerp(amber, grow * 2)
       else mat.color.copy(amber).lerp(red, (grow - 0.5) * 2)
       mat.opacity = t > 8.5 ? 0.7 + 0.3 * Math.sin(state.clock.elapsedTime * 3) : 0.95
@@ -465,18 +664,26 @@ function ReplayScene({ dark, tRef }: { dark: boolean; tRef: RefObject<number> })
 
   return (
     <group ref={group} rotation={[-0.95, 0, 0.4]}>
+      <SunburstLights dark={dark} />
       {segments.map((seg, i) => (
         <mesh
           key={i}
           geometry={geometries[i]}
           ref={seg.tagId === REPLAY_TAG_ID ? target : undefined}
         >
-          <meshBasicMaterial color={seg.color} transparent opacity={0.9} side={THREE.DoubleSide} />
+          <meshStandardMaterial
+            color={seg.color}
+            roughness={0.48}
+            metalness={0.22}
+            transparent
+            opacity={seg.level === 2 ? 0.92 : 0.96}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       ))}
-      <mesh>
-        <cylinderGeometry args={[0.52, 0.52, 0.06, 40]} />
-        <meshBasicMaterial color={dark ? "#1f1f1f" : "#e8e8e8"} />
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.5, 0.5, 0.1, 48]} />
+        <meshStandardMaterial color={dark ? "#242424" : "#e6e6e6"} roughness={0.4} metalness={0.3} />
       </mesh>
     </group>
   )
@@ -521,7 +728,7 @@ function ReplayChart({ t }: { t: number }) {
         </>
       )}
       <text x={cPL} y={CH - 8} fontSize="9" fill="currentColor" fillOpacity="0.45" fontFamily="var(--font-geist-mono)">
-        TRAFO 02 · TEMP. ÓLEO (°C) · TEMPO REAL
+        SE VALE DO FERRO · TRAFO 02 · TEMP. ÓLEO (°C)
       </text>
     </svg>
   )
@@ -605,7 +812,7 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
           <div className="relative flex-1 min-h-[240px]">
             {inView && (
               <Canvas
-                camera={{ position: [0, 0, 6.8], fov: 45 }}
+                camera={{ position: [0, 0, 7.6], fov: 45 }}
                 dpr={[1, 1.5]}
                 gl={{ antialias: true, alpha: true }}
                 frameloop={motionOK ? "always" : "demand"}
@@ -619,7 +826,7 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground leading-5 mt-2">
-            O segmento da Temp. Óleo do Trafo 02 cresce e avermelha conforme o desvio piora.
+            O segmento da Temp. Óleo do Trafo 02 (SE Vale do Ferro) cresce e avermelha conforme o desvio piora.
           </p>
         </div>
 
@@ -681,7 +888,7 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
 }
 
 /* Peças avulsas para composições (ex.: banner de divulgação) */
-export { TagChart, ALL_TAGS, DEFAULT_TAG, detectorScores, DETECTORS }
+export { TagChart, ALL_TAGS, ASSETS, EQUIPMENT_COUNT, DEFAULT_TAG, detectorScores, DETECTORS }
 
 export function BannerSunburst({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
@@ -689,7 +896,7 @@ export function BannerSunburst({ className }: { className?: string }) {
   return (
     <div className={className} aria-hidden>
       <Canvas
-        camera={{ position: [0, 0, 6.6], fov: 45 }}
+        camera={{ position: [0, 0, 7.4], fov: 45 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
         frameloop="always"
@@ -725,6 +932,7 @@ export default function AssetMonitorDemo() {
   const dark = resolvedTheme !== "light"
   const [motionOK, setMotionOK] = useState(true)
   const [selectedId, setSelectedId] = useState(DEFAULT_TAG)
+  const labelRefs = useRef(new Map<string, HTMLDivElement | null>())
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -745,25 +953,33 @@ export default function AssetMonitorDemo() {
         <div className="relative border border-border dark:border-white/10 bg-muted/30 dark:bg-white/[0.03] h-full flex flex-col">
           <div className="flex items-center justify-between px-5 py-3 border-b border-border dark:border-white/10">
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              Empresa → ativo → tag · exemplo ilustrativo
+              Empresa → ativo → equipamento → tag
             </p>
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground hidden sm:block">
               Clique numa tag
             </p>
           </div>
 
-          <div className="relative flex-1 min-h-[340px] md:min-h-[400px]">
+          <div className="relative flex-1 min-h-[360px] md:min-h-[430px]">
             <Canvas
-              camera={{ position: [0, 0, 6.6], fov: 45 }}
+              camera={{ position: [0, 0, 7.4], fov: 45 }}
               dpr={[1, 1.75]}
               gl={{ antialias: true, alpha: true }}
               frameloop="always"
             >
-              <SunburstScene dark={dark} motionOK={motionOK} selected={selectedId} onSelect={setSelectedId} />
+              <SunburstScene
+                dark={dark}
+                motionOK={motionOK}
+                selected={selectedId}
+                onSelect={setSelectedId}
+                labelRefs={labelRefs}
+              />
             </Canvas>
+            {/* rótulos de saúde por ativo — seguem o giro */}
+            <AssetHealthLabels dark={dark} labelRefs={labelRefs} />
             {/* empresa no centro — HTML fixo sobre o giro */}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
+              <div className="text-center bg-background/60 backdrop-blur-[2px] px-3 py-1.5">
                 <p className="font-display text-[11px] md:text-xs font-extrabold tracking-[0.2em]">{COMPANY}</p>
                 <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
                   {ASSETS.length} ativos · {ALL_TAGS.length} tags
@@ -808,7 +1024,7 @@ export default function AssetMonitorDemo() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Legenda de risco */}
+          {/* Legenda de risco + saúde */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 px-5 py-3 border-t border-border dark:border-white/10">
             {([["Baixo risco", dark ? "#525252" : "#a3a3a3"], ["Atenção", "var(--risk-warning)"], ["Crítico", "var(--risk-critical)"]] as const).map(([label, bg]) => (
               <span key={label} className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
@@ -816,6 +1032,10 @@ export default function AssetMonitorDemo() {
                 {label}
               </span>
             ))}
+            <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+              <span className="h-2.5 w-2.5 inline-block border border-current" />
+              % = saúde do ativo
+            </span>
           </div>
         </div>
       </Reveal>

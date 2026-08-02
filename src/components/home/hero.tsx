@@ -93,9 +93,10 @@ export default function Hero() {
           transition={{ delay: 0.8, duration: 0.5 }}
           className="max-w-2xl text-base md:text-xl text-muted-foreground leading-relaxed"
         >
-          Coloco redes neurais para vigiar ativos críticos da rede de energia:
-          modelos que escutam vibração, temperatura e corrente — e enxergam a
-          falha antes de ela acontecer. Do sensor ao modelo, do modelo ao pixel.
+          Deep learning que evita parada não planejada: modelos vigiam UHEs e
+          subestações 24/7 e preveem a falha com dias de antecedência. Um agente
+          de IA aciona a manutenção na hora certa — menos emergência, mais
+          disponibilidade.
         </motion.p>
 
         {/* Fatos — linha executiva */}

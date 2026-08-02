@@ -203,12 +203,10 @@ export default function AboutMe() {
           <Reveal className="md:col-span-2">
             <div className="h-full rounded-none border border-border dark:border-white/10 p-6 bg-muted/40 dark:bg-white/5 leading-8 text-muted-foreground">
               <p className="mb-4">
-                Tecnologia não é minha profissão — é minha linguagem nativa. Desde criança desmontando hardware até colocar redes neurais em produção vigiando ativos críticos da rede de energia, cada layer desta stack foi dominada por necessidade, não por currículo.
-                Transito com naturalidade entre PyTorch para arquitetar LSTM Autoencoders, TypeScript para interfaces reativas e protocolos industriais como ICCP/TASE.2 — porque problema de verdade não respeita fronteira de domínio.
+                Engenheiro de machine learning full-stack no setor elétrico. Construo de ponta a ponta o sistema de manutenção preditiva de uma das maiores companhias de energia do Brasil: deep learning sobre telemetria de UHEs e subestações, integração SCADA/SAP e nuvem GCP.
               </p>
               <p className="mb-5">
-                Hoje desenvolvo o sistema de monitoramento preditivo de ativos de uma das maiores companhias de energia do país: modelos de deep learning que escutam vibração, temperatura e corrente de equipamentos de subestação — e apontam a falha antes de ela acontecer.
-                Implemento, otimizo e entrego. Do zero ao deploy.
+                O resultado: falha antecipada com dias de folga, manutenção que vira agenda em vez de emergência e indicadores que executivo lê — disponibilidade, custo evitado, risco por ativo. Do zero ao deploy.
               </p>
               <Link
                 href="/sobre"

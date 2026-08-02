@@ -172,8 +172,9 @@ export default function CaseStudies() {
                   de dados): detecção por IA com redes neurais recorrentes e convolucionais
                   (LSTM Autoencoders, CNNs) validada por modelos clássicos de ML — Random Forest e
                   KNN — num ensemble que atribui score de risco por tag de telemetria. A hierarquia
-                  empresa → ativo → tag consolida tudo numa visão só, e um agente de IA dispara os
-                  alertas com contexto por WhatsApp e e-mail.
+                  empresa → ativo → equipamento → tag consolida tudo numa visão só, com KPI de
+                  saúde por ativo, e um agente de IA dispara os alertas com contexto por WhatsApp
+                  e e-mail.
                 </p>
               </div>
             </RevealItem>

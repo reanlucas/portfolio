@@ -1,6 +1,6 @@
 "use client"
 
-import { BannerSunburst, TagChart, ALL_TAGS, DEFAULT_TAG, detectorScores, DETECTORS } from "@/components/projetos/assetMonitorDemo"
+import { BannerSunburst, TagChart, ALL_TAGS, ASSETS, EQUIPMENT_COUNT, DEFAULT_TAG, detectorScores, DETECTORS } from "@/components/projetos/assetMonitorDemo"
 
 /*
   Prancheta 1200×627 (proporção de post do LinkedIn) — visão completa da
@@ -64,14 +64,16 @@ export default function BannerBoard() {
           {/* Sunburst menor + legenda */}
           <div className="col-span-4 border-r border-white/10 flex flex-col">
             <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-white/50 px-5 pt-3">
-              Empresa → ativo → tag
+              Empresa → ativo → equipamento → tag
             </p>
             <div className="relative flex-1 min-h-0">
               <BannerSunburst className="absolute inset-0" />
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <p className="font-display text-[10px] font-extrabold tracking-[0.2em]">ENERGIA S.A.</p>
-                  <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-white/50">4 ativos · 12 tags</p>
+                  <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-white/50">
+                    {ASSETS.length} ativos · {EQUIPMENT_COUNT} equipamentos · {ALL_TAGS.length} tags
+                  </p>
                 </div>
               </div>
             </div>
