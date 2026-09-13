@@ -93,5 +93,10 @@ pnpm build   # production build
 
 ---
 
+LinkedIn covers (1584×396) live in `marketing/linkedin-capa-en.png` and
+`marketing/linkedin-capa-pt.png`, rendered by the internal `/en/capa` and `/capa` routes.
+
+---
+
 Built by [Rean Lucas](https://github.com/reanlucas) · demo data is illustrative
 (fictional company ENERGIA S.A.) · [reanlucasdev@gmail.com](mailto:reanlucasdev@gmail.com)

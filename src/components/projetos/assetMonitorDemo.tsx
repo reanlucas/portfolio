@@ -466,22 +466,25 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
 
 /* Peças avulsas para composições (ex.: banner de divulgação) */
 
-const ptLabel = (id: string, compact: boolean) => {
-  const node = getNode(id)
-  if (!node) return ""
-  return (compact && node.short ? node.short : node.name).pt
-}
-
 export function BannerSunburst({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
+  const { locale } = useLocale()
   const dark = resolvedTheme !== "light"
+  const labelFor = useCallback(
+    (id: string, compact: boolean) => {
+      const node = getNode(id)
+      if (!node) return ""
+      return pick(compact && node.short ? node.short : node.name, locale)
+    },
+    [locale]
+  )
   return (
     <div className={className} aria-hidden>
       <SunburstCanvas
         dark={dark}
         motionOK
         selected={DEFAULT_TAG}
-        labelFor={ptLabel}
+        labelFor={labelFor}
         dpr={[1, 2]}
         style={{ pointerEvents: "none" }}
       />

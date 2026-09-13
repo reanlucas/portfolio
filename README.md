@@ -93,5 +93,10 @@ pnpm build   # build de produção
 
 ---
 
+Capas do LinkedIn (1584×396) em `marketing/linkedin-capa-pt.png` e
+`marketing/linkedin-capa-en.png`, geradas pelas rotas internas `/capa` e `/en/capa`.
+
+---
+
 Feito por [Rean Lucas](https://github.com/reanlucas) · dados dos demos são ilustrativos
 (empresa fictícia ENERGIA S.A.) · [reanlucasdev@gmail.com](mailto:reanlucasdev@gmail.com)
