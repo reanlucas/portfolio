@@ -43,9 +43,9 @@ O site demonstra, com dados e animações, o tipo de sistema que eu construo:
 
 - **Sunburst 3D navegável de risco de ativos** — a árvore inteira em cinco níveis: empresa →
   ativo (UHEs e SEs) → classe de equipamento (gerador, sistema de resfriamento, banco de
-  capacitores…) → equipamento → tag. Clique num anel e ele vira o centro, reabrindo a subárvore;
-  clique numa tag e veja a predição do modelo contra o valor real do sensor. Metal escovado com
-  reflexos reais, varredura de radar e arrasto com inércia.
+  capacitores…) → equipamento → tag. Todo nó aparece com o nome gravado na própria fatia, em
+  metal escovado com reflexos reais. Clique num anel e ele vira o centro, reabrindo a subárvore;
+  clique numa tag e veja a predição do modelo contra o valor real do sensor.
 - **Predição × real** — gráficos com envelope de normalidade aprendido por redes neurais
   (RNN/LSTM, CNN, autoencoders), destacando os pontos onde o sensor foge do previsto.
 - **Ensemble de detecção** — a anomalia só vira alerta quando ML clássico (Random Forest, KNN)

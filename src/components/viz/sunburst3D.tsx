@@ -60,16 +60,27 @@ const MAX_RING_WIDTH = 0.8
 /** folga angular por anel — os de fora são mais finos, precisam de menos */
 const ANGLE_GAP = [0.032, 0.024, 0.018, 0.014]
 /** raio onde os rótulos do primeiro anel ficam ancorados */
-const LABEL_RADIUS = 3.15
+const LABEL_RADIUS = 3.0
+
+/** Peso radial de cada nível: ativo, classe, equipamento, tag. O anel das tags
+ *  é o mais largo porque é onde moram os nomes compridos. */
+const RING_WEIGHTS = [1, 0.82, 0.95, 1.4]
 
 /** Com menos níveis à mostra o miolo abre: o disco vira mostrador, não prato. */
 function ringBands(n: number) {
-  const raw = (OUTER - 0.6 - RING_GAP * (n - 1)) / n
-  const w = Math.min(MAX_RING_WIDTH, raw)
-  const inner = OUTER - (w * n + RING_GAP * (n - 1))
-  const bands = Array.from({ length: n }, (_, i) => {
-    const r0 = inner + i * (w + RING_GAP)
-    return { r0, r1: r0 + w }
+  const weights = RING_WEIGHTS.slice(RING_WEIGHTS.length - n)
+  const sum = weights.reduce((a, b) => a + b, 0)
+  const available = OUTER - 0.6 - RING_GAP * (n - 1)
+  let widths = weights.map((w) => (available * w) / sum)
+  const widest = Math.max(...widths)
+  if (widest > MAX_RING_WIDTH) widths = widths.map((w) => (w * MAX_RING_WIDTH) / widest)
+  const inner = OUTER - (widths.reduce((a, b) => a + b, 0) + RING_GAP * (n - 1))
+
+  let r0 = inner
+  const bands = widths.map((w) => {
+    const band = { r0, r1: r0 + w }
+    r0 += w + RING_GAP
+    return band
   })
   return { bands, inner }
 }
@@ -139,18 +150,177 @@ export function buildLayout(
   return { slices, anchors, inner }
 }
 
-function arcGeometry(s: Slice) {
+function arcShape(s: Slice) {
   const shape = new THREE.Shape()
   shape.absarc(0, 0, s.r1, s.a0, s.a1, false)
   shape.absarc(0, 0, s.r0, s.a1, s.a0, true)
-  return new THREE.ExtrudeGeometry(shape, {
+  return shape
+}
+
+/** o chanfro cresce para fora dos dois lados: a face de cima fica em
+ *  `depth + BEVEL_THICKNESS`, e é aí que a placa de texto precisa pousar */
+const BEVEL_THICKNESS = 0.02
+
+function arcGeometry(s: Slice) {
+  return new THREE.ExtrudeGeometry(arcShape(s), {
     depth: s.depth,
     curveSegments: 28,
     bevelEnabled: true,
-    bevelThickness: 0.02,
+    bevelThickness: BEVEL_THICKNESS,
     bevelSize: 0.012,
     bevelSegments: 3,
   })
+}
+
+/* ─── Nomes gravados na face de cima de cada fatia ───────────────────────
+   Um canvas só, em coordenadas de mundo, com o nome de todo nó desenhado
+   dentro da sua fatia. Cada fatia recebe uma placa plana com esse mesmo
+   mapa; a geometria recorta o texto, então nome nenhum vaza para o vizinho.
+   O texto acompanha o giro porque a placa é filha da fatia.              */
+
+/** largura do mundo coberta pela textura (o disco vai até 2.72 de raio) */
+const LABEL_SPAN = 5.8
+/** altura mínima de fonte, em unidades de mundo, para ainda valer a pena */
+const MIN_FONT = 0.055
+const MAX_FONT = 0.17
+/** espaçamento entre letras, como fração do corpo da fonte */
+const TRACKING = 0.04
+/** corpo usado só para medir a largura do texto uma vez */
+const REF_FONT = 100
+
+function monoFamily() {
+  if (typeof document === "undefined") return "monospace"
+  const v = getComputedStyle(document.body).getPropertyValue("--font-geist-mono").trim()
+  return v ? `${v}, ui-monospace, monospace` : "ui-monospace, monospace"
+}
+
+/** encurta até caber, com reticências; devolve "" se nem 3 letras cabem */
+function fitText(ctx: CanvasRenderingContext2D, text: string, budgetPx: number) {
+  if (ctx.measureText(text).width <= budgetPx) return text
+  for (let n = text.length - 1; n >= 3; n--) {
+    const candidate = `${text.slice(0, n).trimEnd()}…`
+    if (ctx.measureText(candidate).width <= budgetPx) return candidate
+  }
+  return ""
+}
+
+export function drawLabels(
+  slices: Slice[],
+  labelFor: (id: string, compact: boolean) => string,
+  canvas?: HTMLCanvasElement,
+  size = 2048
+) {
+  const c = canvas ?? document.createElement("canvas")
+  c.width = c.height = size
+  const ctx = c.getContext("2d")!
+  const k = size / LABEL_SPAN // pixels por unidade de mundo
+  const cx = size / 2
+  const cy = size / 2
+  const family = monoFamily()
+
+  ctx.clearRect(0, 0, size, size)
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+
+  // o metal reflete claro nos dois temas, então o nome é entalhado escuro com
+  // um fio de luz embaixo — a cor vai na textura, não no material
+  const ENGRAVE = "rgba(12,12,12,0.92)"
+  const HIGHLIGHT = "rgba(255,255,255,0.5)"
+  const emboss = (draw: (dx: number, dy: number) => void, lift: number) => {
+    ctx.fillStyle = HIGHLIGHT
+    draw(0, lift)
+    ctx.fillStyle = ENGRAVE
+    draw(0, 0)
+  }
+
+  for (const s of slices) {
+    if (s.ring === 0) continue // o primeiro anel já tem rótulo em HTML, nítido
+    const name = labelFor(s.id, false)
+    if (!name) continue
+
+    const am = (s.a0 + s.a1) / 2
+    const rm = (s.r0 + s.r1) / 2
+    const arcLen = (s.a1 - s.a0) * rm
+    const radLen = s.r1 - s.r0
+
+    // qual orientação deixa o nome maior? deitado no arco ou escrito no raio
+    const measure = (text: string) => {
+      ctx.font = `600 ${REF_FONT}px ${family}`
+      try { ctx.letterSpacing = `${REF_FONT * TRACKING}px` } catch { /* navegador antigo */ }
+      const perUnit = ctx.measureText(text).width / REF_FONT
+      if (!perUnit) return null
+      const fontFor = (along: number, across: number) =>
+        Math.min(MAX_FONT, across, ((along * 0.88) / perUnit) * 0.97)
+      const fTan = fontFor(arcLen, radLen * 0.42)
+      const fRad = fontFor(radLen, arcLen * 0.5)
+      return { text, tangential: fTan >= fRad, font: Math.max(fTan, fRad) }
+    }
+
+    let best = measure(name.toUpperCase())
+    if (!best) continue
+    // não coube inteiro? tenta o apelido antes de cortar a palavra
+    if (best.font < MIN_FONT) {
+      const compact = labelFor(s.id, true).toUpperCase()
+      if (compact && compact !== best.text) {
+        const alt = measure(compact)
+        if (alt && alt.font > best.font) best = alt
+      }
+    }
+    const { text: full, tangential, font: fontWorld } = best
+    const budget = (tangential ? arcLen : radLen) * 0.88 * k
+
+    const fontPx = Math.max(MIN_FONT * k, fontWorld * k)
+    ctx.font = `600 ${fontPx.toFixed(1)}px ${family}`
+    try { ctx.letterSpacing = `${(fontPx * TRACKING).toFixed(1)}px` } catch { /* navegador antigo */ }
+
+    // só corta quando nem no corpo mínimo o nome inteiro cabe
+    const text = fitText(ctx, full, budget)
+    if (!text) continue
+
+    const lift = Math.max(1, fontPx * 0.06)
+    ctx.save()
+    ctx.translate(cx, cy)
+    if (tangential) {
+      // texto curvo: cada letra gira junto com o arco
+      const width = ctx.measureText(text).width
+      const spanAngle = width / (rm * k)
+      // no semicírculo de baixo o texto fica de cabeça para baixo; inverte
+      const upright = Math.sin(am) >= 0
+      const dir = upright ? -1 : 1
+      let a = am + (dir * spanAngle) / 2
+      for (const ch of text) {
+        const chW = ctx.measureText(ch).width
+        const chAngle = chW / (rm * k)
+        a -= (dir * chAngle) / 2
+        ctx.save()
+        ctx.rotate(-a)
+        ctx.translate(rm * k, 0)
+        ctx.rotate(upright ? -Math.PI / 2 : Math.PI / 2)
+        emboss((dx, dy) => ctx.fillText(ch, dx, dy), lift)
+        ctx.restore()
+        a -= (dir * chAngle) / 2
+      }
+    } else {
+      // texto radial, sempre lendo de dentro para fora
+      const flip = Math.cos(am) < 0
+      ctx.rotate(-am)
+      if (flip) ctx.rotate(Math.PI)
+      const x = (flip ? -1 : 1) * rm * k
+      emboss((dx, dy) => ctx.fillText(text, x + dx, dy), lift)
+    }
+    ctx.restore()
+  }
+
+  return c
+}
+
+function makeLabelTexture(slices: Slice[], labelFor: (id: string, compact: boolean) => string) {
+  const tex = new THREE.CanvasTexture(drawLabels(slices, labelFor))
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.repeat.set(1 / LABEL_SPAN, 1 / LABEL_SPAN)
+  tex.offset.set(0.5, 0.5)
+  tex.anisotropy = 4
+  return tex
 }
 
 function circlePoints(r: number, n = 128) {
@@ -389,6 +559,11 @@ export type SunburstSceneProps = {
   interactive?: boolean
   /** rótulos DOM projetados para o primeiro anel */
   labelRefs?: RefObject<Map<string, HTMLDivElement | null>>
+  /** nome de cada nó — grava o texto na face de cima das fatias dos anéis internos.
+   *  `compact` pede o apelido curto, usado quando o nome inteiro não cabe. */
+  labelFor?: (id: string, compact: boolean) => string
+  /** nó sob o ponteiro, para o cabeçalho mostrar o caminho completo */
+  onHoverNode?: (id: string | null) => void
   /** replay dirigido por relógio externo: a tag cresce e avermelha */
   replay?: ReplayDriver
   /** construção animada das fatias */
@@ -410,7 +585,8 @@ const clampRange = (v: number, lo: number, hi: number) =>
 
 export function SunburstScene({
   dark, motionOK, focusId = ROOT_ID, onFocus, selected = null, onSelect,
-  interactive = false, labelRefs, replay, intro = false, introPlay = true, spin = 0.07,
+  interactive = false, labelRefs, labelFor, onHoverNode, replay,
+  intro = false, introPlay = true, spin = 0.07,
 }: SunburstSceneProps) {
   const tiltRef = useRef<THREE.Group>(null)
   const spinRef = useRef<THREE.Group>(null)
@@ -431,6 +607,28 @@ export function SunburstScene({
     [anchors]
   )
   const textures = useMemo(getTextures, [])
+  // nomes gravados nas fatias dos anéis internos (o externo usa rótulo HTML)
+  const labelTex = useMemo(
+    () => (labelFor && typeof document !== "undefined" ? makeLabelTexture(slices, labelFor) : null),
+    [slices, labelFor]
+  )
+  const plateGeos = useMemo(
+    () => slices.map((s) => (labelTex && s.ring > 0 ? new THREE.ShapeGeometry(arcShape(s), 24) : null)),
+    [slices, labelTex]
+  )
+  useEffect(() => () => labelTex?.dispose(), [labelTex])
+  useEffect(() => () => plateGeos.forEach((g) => g?.dispose()), [plateGeos])
+  // a fonte do site pode chegar depois do primeiro desenho — redesenha quando chegar
+  useEffect(() => {
+    if (!labelTex || !labelFor || !document.fonts) return
+    let alive = true
+    document.fonts.ready.then(() => {
+      if (!alive) return
+      drawLabels(slices, labelFor, labelTex.image as HTMLCanvasElement)
+      labelTex.needsUpdate = true
+    })
+    return () => { alive = false }
+  }, [labelTex, labelFor, slices])
   const proj = useMemo(() => new THREE.Vector3(), [])
   const guideGeos = useMemo(
     () => ({
@@ -468,6 +666,8 @@ export function SunburstScene({
     return () => { document.body.style.cursor = "" }
   }, [hovered, interactive])
 
+  useEffect(() => { onHoverNode?.(hovered) }, [hovered, onHoverNode])
+
   const clockRef = useRef(0)
   const spawnRef = useRef(-1)
   const drag = useRef({ active: false, lastX: 0, lastT: 0, vel: 0, moved: 0, lastInteraction: -10, inside: false })
@@ -477,6 +677,8 @@ export function SunburstScene({
     spawnRef.current = -1
     setHovered(null)
   }, [focusId])
+
+  useEffect(() => () => onHoverNode?.(null), [onHoverNode])
 
   useEffect(() => {
     if (!interactive) return
@@ -701,6 +903,27 @@ export function SunburstScene({
             >
               <lineBasicMaterial color={fg} transparent opacity={dark ? 0.14 : 0.2} />
             </lineSegments>
+
+            {/* nome gravado na face de cima — acompanha a altura da fatia */}
+            {labelTex && plateGeos[i] && (
+              <mesh
+                geometry={plateGeos[i]!}
+                position={[0, 0, s.depth + BEVEL_THICKNESS + 0.008]}
+                renderOrder={6}
+                raycast={() => null}
+              >
+                <meshBasicMaterial
+                  map={labelTex}
+                  transparent
+                  opacity={0.95}
+                  depthWrite={false}
+                  toneMapped={false}
+                  polygonOffset
+                  polygonOffsetFactor={-2}
+                  polygonOffsetUnits={-2}
+                />
+              </mesh>
+            )}
           </mesh>
         ))}
 
@@ -736,7 +959,7 @@ export function SunburstCanvas({
   style,
   dpr = [1, 1.75],
   frameloop = "always",
-  camera = { position: [0, 0, 7.9] as [number, number, number], fov: 45 },
+  camera = { position: [0, 0, 6.6] as [number, number, number], fov: 45 },
   ...scene
 }: SunburstSceneProps & {
   className?: string

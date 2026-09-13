@@ -43,6 +43,9 @@ export default function CoverBoard() {
             Eu me instalo onde o problema mora e só saio quando o modelo está rodando,
             integrado e vigiado — prevendo falhas em UHEs e subestações antes da parada.
           </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40 mb-3">
+            sensores → modelos → risco → ação
+          </p>
           <div className="flex flex-wrap gap-2">
             {chips.map((c) => (
               <span
@@ -55,12 +58,6 @@ export default function CoverBoard() {
           </div>
         </div>
 
-        {/* hairline + assinatura discreta no rodapé direito */}
-        <div className="absolute right-8 bottom-5 flex items-center gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
-            sensores → modelos → risco → ação
-          </span>
-        </div>
       </div>
     </div>
   )

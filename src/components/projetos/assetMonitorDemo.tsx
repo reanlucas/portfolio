@@ -466,12 +466,25 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
 
 /* Peças avulsas para composições (ex.: banner de divulgação) */
 
+const ptLabel = (id: string, compact: boolean) => {
+  const node = getNode(id)
+  if (!node) return ""
+  return (compact && node.short ? node.short : node.name).pt
+}
+
 export function BannerSunburst({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
   const dark = resolvedTheme !== "light"
   return (
     <div className={className} aria-hidden>
-      <SunburstCanvas dark={dark} motionOK selected={DEFAULT_TAG} dpr={[1, 2]} style={{ pointerEvents: "none" }} />
+      <SunburstCanvas
+        dark={dark}
+        motionOK
+        selected={DEFAULT_TAG}
+        labelFor={ptLabel}
+        dpr={[1, 2]}
+        style={{ pointerEvents: "none" }}
+      />
     </div>
   )
 }
@@ -498,6 +511,15 @@ export default function AssetMonitorDemo() {
   const stageRef = useRef<HTMLDivElement>(null)
   const stageInView = useInView(stageRef, { margin: "-40px" })
 
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const labelFor = useCallback(
+    (id: string, compact: boolean) => {
+      const node = getNode(id)
+      if (!node) return ""
+      return pick(compact && node.short ? node.short : node.name, locale)
+    },
+    [locale]
+  )
   const focusNode = getNode(focusId) ?? TREE
   const focusChildren = useMemo(() => childrenOf(focusNode), [focusNode])
   const trail = useMemo(() => pathTo(focusId), [focusId])
@@ -517,6 +539,10 @@ export default function AssetMonitorDemo() {
   const deviation = ((tag.real - tag.pred) / tag.pred) * 100
   const d = t.demo
 
+  const hoveredPath = hoveredId
+    ? pathTo(hoveredId).slice(1).map((n) => pick(n.name, locale)).join(" · ")
+    : null
+
   const childKind = (focusChildren[0]?.kind ?? "tag") as Exclude<NodeKind, "company">
   const childCount = focusChildren.length
   const tagsInFocus = tagCountOf(focusId)
@@ -528,9 +554,9 @@ export default function AssetMonitorDemo() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Sunburst navegável */}
-        <Reveal>
+        <Reveal className="lg:col-span-3">
           <div className="relative border border-border dark:border-white/10 bg-muted/30 dark:bg-white/[0.03] h-full flex flex-col">
             {/* breadcrumb + dica */}
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3 border-b border-border dark:border-white/10">
@@ -556,12 +582,16 @@ export default function AssetMonitorDemo() {
                   )
                 })}
               </nav>
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground hidden sm:block">
-                {d.drillHint}
+              <p className="font-mono text-[10px] uppercase tracking-[0.25em] hidden sm:block max-w-[55%] truncate">
+                {hoveredPath ? (
+                  <span className="text-foreground">{hoveredPath}</span>
+                ) : (
+                  <span className="text-muted-foreground">{d.drillHint}</span>
+                )}
               </p>
             </div>
 
-            <div ref={stageRef} className="relative flex-1 min-h-[360px] md:min-h-[430px] select-none">
+            <div ref={stageRef} className="relative flex-1 min-h-[360px] md:min-h-[520px] select-none">
               <SunburstCanvas
                 dark={dark}
                 motionOK={motionOK}
@@ -570,6 +600,8 @@ export default function AssetMonitorDemo() {
                 selected={selectedId}
                 onSelect={setSelectedId}
                 interactive
+                labelFor={labelFor}
+                onHoverNode={setHoveredId}
                 intro
                 introPlay={stageInView}
                 frameloop={stageInView ? "always" : "demand"}
@@ -678,7 +710,7 @@ export default function AssetMonitorDemo() {
         </Reveal>
 
         {/* Gráfico predição × real */}
-        <Reveal delay={0.1}>
+        <Reveal delay={0.1} className="lg:col-span-2">
           <figure className="border border-border dark:border-white/10 bg-muted/30 dark:bg-white/[0.03] h-full flex flex-col">
             <figcaption className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border dark:border-white/10">
               <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">

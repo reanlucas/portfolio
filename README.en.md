@@ -43,9 +43,9 @@ The site demonstrates, with data and animation, the kind of system I build:
 
 - **Navigable 3D asset-risk sunburst** — the whole tree in five levels: company → asset (hydro
   plants and substations) → equipment class (generator, cooling system, capacitor bank…) →
-  equipment → tag. Click a ring and it becomes the centre, reopening its subtree; click a tag and
-  see the model's prediction against the sensor's actual value. Brushed metal with real
-  reflections, a radar sweep and drag with inertia.
+  equipment → tag. Every node carries its name engraved on its own slice, in brushed metal with
+  real reflections. Click a ring and it becomes the centre, reopening its subtree; click a tag and
+  see the model's prediction against the sensor's actual value.
 - **Predicted × actual** — charts with a normality envelope learned by neural networks
   (RNN/LSTM, CNN, autoencoders), highlighting where the sensor escapes the forecast.
 - **Detection ensemble** — an anomaly only becomes an alert when classic ML (Random Forest, KNN)

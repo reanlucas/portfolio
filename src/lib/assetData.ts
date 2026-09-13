@@ -15,36 +15,43 @@ export type Risk = "low" | "warn" | "critical"
 export type Bi = { pt: string; en: string }
 export type NodeKind = "company" | "asset" | "class" | "equipment" | "tag"
 
+/** `short` é o apelido usado quando a fatia do sunburst é estreita demais
+ *  para o nome inteiro — preferível a cortar a palavra no meio. */
 export type TagNode = {
   kind: "tag"
   id: string
   name: Bi
+  short?: Bi
   unit: string
   real: number
   pred: number
   risk: Risk
 }
-export type EquipmentNode = { kind: "equipment"; id: string; name: Bi; children: TagNode[] }
-export type ClassNode = { kind: "class"; id: string; name: Bi; children: EquipmentNode[] }
+export type EquipmentNode = {
+  kind: "equipment"; id: string; name: Bi; short?: Bi; children: TagNode[]
+}
+export type ClassNode = { kind: "class"; id: string; name: Bi; short?: Bi; children: EquipmentNode[] }
 export type AssetNode = {
   kind: "asset"
   id: string
   name: Bi
+  short?: Bi
   assetKind: "UHE" | "SE"
   health: number
   children: ClassNode[]
 }
-export type CompanyNode = { kind: "company"; id: string; name: Bi; children: AssetNode[] }
+export type CompanyNode = { kind: "company"; id: string; name: Bi; short?: Bi; children: AssetNode[] }
 export type TreeNode = CompanyNode | AssetNode | ClassNode | EquipmentNode | TagNode
 
 const bi = (pt: string, en: string): Bi => ({ pt, en })
 
-const tag = (id: string, name: Bi, unit: string, real: number, pred: number, risk: Risk): TagNode =>
-  ({ kind: "tag", id, name, unit, real, pred, risk })
-const equipment = (id: string, name: Bi, children: TagNode[]): EquipmentNode =>
-  ({ kind: "equipment", id, name, children })
-const klass = (id: string, name: Bi, children: EquipmentNode[]): ClassNode =>
-  ({ kind: "class", id, name, children })
+const tag = (
+  id: string, name: Bi, unit: string, real: number, pred: number, risk: Risk, short?: Bi
+): TagNode => ({ kind: "tag", id, name, short, unit, real, pred, risk })
+const equipment = (id: string, name: Bi, children: TagNode[], short?: Bi): EquipmentNode =>
+  ({ kind: "equipment", id, name, short, children })
+const klass = (id: string, name: Bi, children: EquipmentNode[], short?: Bi): ClassNode =>
+  ({ kind: "class", id, name, short, children })
 const asset = (
   id: string, name: Bi, assetKind: "UHE" | "SE", health: number, children: ClassNode[]
 ): AssetNode => ({ kind: "asset", id, name, assetKind, health, children })
@@ -62,6 +69,15 @@ const CLASS_NAMES = {
   pararaios: bi("Para-raios", "Surge Arrester"),
 }
 
+/** apelidos para o anel estreito do sunburst */
+const CLASS_SHORT = {
+  trafo: bi("Trafo", "Transf."),
+  resfriamento: bi("Resfriamento", "Cooling"),
+  capacitores: bi("Banco Cap.", "Cap. Bank"),
+  disjuntor: bi("Disjuntor", "Breaker"),
+  pararaios: bi("Para-raios", "Arrester"),
+}
+
 /* ─── A árvore ──────────────────────────────────────────────────────────── */
 
 export const COMPANY_NAME = "ENERGIA S.A."
@@ -74,23 +90,23 @@ export const TREE: CompanyNode = {
     asset("uhe-salto", bi("UHE Salto das Pedras", "Salto das Pedras HPP"), "UHE", 96, [
       klass("sp-cl-ger", CLASS_NAMES.gerador, [
         equipment("sp-ger-01", bi("Gerador 01", "Generator 01"), [
-          tag("sp-estator", bi("Temp. Estator", "Stator Temp"), "°C", 55.1, 54.2, "low"),
-          tag("sp-exc", bi("Corrente Excitação", "Excitation Current"), "A", 118, 116, "low"),
+          tag("sp-estator", bi("Temp. Estator", "Stator Temp"), "°C", 55.1, 54.2, "low", bi("T. Estator", "Stator T.")),
+          tag("sp-exc", bi("Corrente Excitação", "Excitation Current"), "A", 118, 116, "low", bi("Corr. Exc.", "Exc. Current")),
         ]),
         equipment("sp-ger-02", bi("Gerador 02", "Generator 02"), [
-          tag("sp-estator2", bi("Temp. Estator", "Stator Temp"), "°C", 54.4, 54.0, "low"),
+          tag("sp-estator2", bi("Temp. Estator", "Stator Temp"), "°C", 54.4, 54.0, "low", bi("T. Estator", "Stator T.")),
         ]),
       ]),
       klass("sp-cl-turb", CLASS_NAMES.turbina, [
         equipment("sp-turb-01", bi("Turbina 01", "Turbine 01"), [
-          tag("sp-vib", bi("Vibração Eixo", "Shaft Vibration"), "mm/s", 2.2, 2.1, "low"),
-          tag("sp-press", bi("Pressão Espiral", "Spiral Case Pressure"), "kPa", 412, 410, "low"),
+          tag("sp-vib", bi("Vibração Eixo", "Shaft Vibration"), "mm/s", 2.2, 2.1, "low", bi("Vib. Eixo", "Shaft Vib.")),
+          tag("sp-press", bi("Pressão Espiral", "Spiral Case Pressure"), "kPa", 412, 410, "low", bi("Pressão Esp.", "Spiral Press.")),
         ]),
       ]),
       klass("sp-cl-manc", CLASS_NAMES.mancal, [
         equipment("sp-manc-01", bi("Mancal Guia", "Guide Bearing"), [
-          tag("sp-mtemp", bi("Temp. Mancal", "Bearing Temp"), "°C", 61.4, 60.8, "low"),
-        ]),
+          tag("sp-mtemp", bi("Temp. Mancal", "Bearing Temp"), "°C", 61.4, 60.8, "low", bi("T. Mancal", "Bearing T.")),
+        ], bi("Mancal Guia", "Guide Brg.")),
       ]),
     ]),
 
@@ -98,20 +114,20 @@ export const TREE: CompanyNode = {
       klass("rb-cl-trafo", CLASS_NAMES.trafo, [
         equipment("rb-trafo-01", bi("Trafo Elevador 01", "Step-up Transformer 01"), [
           tag("t1-oleo", bi("Temp. Óleo", "Oil Temp"), "°C", 74.6, 62.1, "critical"),
-          tag("t1-enrol", bi("Temp. Enrolamento", "Winding Temp"), "°C", 68.9, 67.5, "low"),
+          tag("t1-enrol", bi("Temp. Enrolamento", "Winding Temp"), "°C", 68.9, 67.5, "low", bi("T. Enrol.", "Winding T.")),
           tag("t1-corr", bi("Corrente", "Current"), "A", 409, 402, "low"),
-        ]),
-      ]),
+        ], bi("Trafo Elev. 01", "Step-up 01")),
+      ], CLASS_SHORT.trafo),
       klass("rb-cl-resf", CLASS_NAMES.resfriamento, [
         equipment("rb-resf-01", bi("Unidade de Resfriamento 01", "Cooling Unit 01"), [
-          tag("rb-vazao", bi("Vazão de Óleo", "Oil Flow"), "m³/h", 38.2, 52.0, "critical"),
-          tag("rb-tent", bi("Temp. Entrada", "Inlet Temp"), "°C", 44.1, 41.8, "warn"),
-        ]),
-      ]),
+          tag("rb-vazao", bi("Vazão de Óleo", "Oil Flow"), "m³/h", 38.2, 52.0, "critical", bi("Vazão Óleo", "Oil Flow")),
+          tag("rb-tent", bi("Temp. Entrada", "Inlet Temp"), "°C", 44.1, 41.8, "warn", bi("T. Entrada", "Inlet T.")),
+        ], bi("Resfr. 01", "Cooling 01")),
+      ], CLASS_SHORT.resfriamento),
       klass("rb-cl-ger", CLASS_NAMES.gerador, [
         equipment("rb-ger-02", bi("Gerador 02", "Generator 02"), [
           tag("g2-vib", bi("Vibração", "Vibration"), "mm/s", 4.6, 3.4, "warn"),
-          tag("g2-estator", bi("Temp. Estator", "Stator Temp"), "°C", 56.3, 55.9, "low"),
+          tag("g2-estator", bi("Temp. Estator", "Stator Temp"), "°C", 56.3, 55.9, "low", bi("T. Estator", "Stator T.")),
         ]),
       ]),
     ]),
@@ -119,21 +135,21 @@ export const TREE: CompanyNode = {
     asset("uhe-serra", bi("UHE Serra Azul", "Serra Azul HPP"), "UHE", 93, [
       klass("sa-cl-turb", CLASS_NAMES.turbina, [
         equipment("sa-turb-02", bi("Turbina 02", "Turbine 02"), [
-          tag("sa-vib", bi("Vibração Eixo", "Shaft Vibration"), "mm/s", 2.8, 2.6, "low"),
-          tag("sa-cav", bi("Índice Cavitação", "Cavitation Index"), "", 0.31, 0.28, "low"),
+          tag("sa-vib", bi("Vibração Eixo", "Shaft Vibration"), "mm/s", 2.8, 2.6, "low", bi("Vib. Eixo", "Shaft Vib.")),
+          tag("sa-cav", bi("Índice Cavitação", "Cavitation Index"), "", 0.31, 0.28, "low", bi("Ind. Cavit.", "Cavitation")),
         ]),
       ]),
       klass("sa-cl-manc", CLASS_NAMES.mancal, [
         equipment("sa-manc-03", bi("Mancal LA 03", "Bearing LA 03"), [
-          tag("m3-temp", bi("Temp. Mancal", "Bearing Temp"), "°C", 82.3, 79.6, "warn"),
-          tag("m3-vrad", bi("Vib. Radial", "Radial Vibration"), "mm/s", 2.4, 2.3, "low"),
+          tag("m3-temp", bi("Temp. Mancal", "Bearing Temp"), "°C", 82.3, 79.6, "warn", bi("T. Mancal", "Bearing T.")),
+          tag("m3-vrad", bi("Vib. Radial", "Radial Vibration"), "mm/s", 2.4, 2.3, "low", bi("Vib. Radial", "Radial Vib.")),
         ]),
       ]),
       klass("sa-cl-resf", CLASS_NAMES.resfriamento, [
         equipment("sa-resf-02", bi("Trocador de Calor 02", "Heat Exchanger 02"), [
           tag("sa-dt", bi("Delta T", "Delta T"), "°C", 11.8, 11.2, "low"),
-        ]),
-      ]),
+        ], bi("Trocador 02", "Exchanger 02")),
+      ], CLASS_SHORT.resfriamento),
     ]),
 
     asset("se-vale", bi("SE Vale do Ferro", "Vale do Ferro Substation"), "SE", 91, [
@@ -142,18 +158,18 @@ export const TREE: CompanyNode = {
           tag("t2-oleo", bi("Temp. Óleo", "Oil Temp"), "°C", 58.4, 58.0, "low"),
           tag("t2-corr", bi("Corrente", "Current"), "A", 385, 383, "low"),
         ]),
-      ]),
+      ], CLASS_SHORT.trafo),
       klass("vf-cl-disj", CLASS_NAMES.disjuntor, [
         equipment("vf-disj-152", bi("Disjuntor 152-8", "Breaker 152-8"), [
-          tag("vf-sf6", bi("Pressão SF₆", "SF₆ Pressure"), "bar", 6.1, 6.1, "low"),
-          tag("vf-ab", bi("Tempo Abertura", "Opening Time"), "ms", 38, 36, "low"),
-        ]),
-      ]),
+          tag("vf-sf6", bi("Pressão SF₆", "SF₆ Pressure"), "bar", 6.1, 6.1, "low", bi("Pressão SF₆", "SF₆ Press.")),
+          tag("vf-ab", bi("Tempo Abertura", "Opening Time"), "ms", 38, 36, "low", bi("T. Abertura", "Open Time")),
+        ], bi("Disj. 152-8", "Brk. 152-8")),
+      ], CLASS_SHORT.disjuntor),
       klass("vf-cl-cap", CLASS_NAMES.capacitores, [
         equipment("vf-cap-01", bi("Banco 01", "Bank 01"), [
-          tag("vf-des", bi("Desequilíbrio", "Unbalance"), "A", 1.8, 1.7, "low"),
+          tag("vf-des", bi("Desequilíbrio", "Unbalance"), "A", 1.8, 1.7, "low", bi("Desequil.", "Unbalance")),
         ]),
-      ]),
+      ], CLASS_SHORT.capacitores),
     ]),
 
     asset("se-porto", bi("SE Porto Norte", "Porto Norte Substation"), "SE", 82, [
@@ -162,18 +178,18 @@ export const TREE: CompanyNode = {
           tag("pn-oleo", bi("Temp. Óleo", "Oil Temp"), "°C", 66.2, 61.9, "warn"),
           tag("pn-corr", bi("Corrente", "Current"), "A", 348, 344, "low"),
         ]),
-      ]),
+      ], CLASS_SHORT.trafo),
       klass("pn-cl-pr", CLASS_NAMES.pararaios, [
         equipment("pn-pr-04", bi("Para-raios 04", "Surge Arrester 04"), [
-          tag("pn-fuga", bi("Corrente de Fuga", "Leakage Current"), "mA", 0.9, 0.6, "warn"),
-        ]),
-      ]),
+          tag("pn-fuga", bi("Corrente de Fuga", "Leakage Current"), "mA", 0.9, 0.6, "warn", bi("Corr. Fuga", "Leakage")),
+        ], bi("Para-r. 04", "Arrester 04")),
+      ], CLASS_SHORT.pararaios),
       klass("pn-cl-cap", CLASS_NAMES.capacitores, [
         equipment("pn-cap-02", bi("Banco 02", "Bank 02"), [
-          tag("pn-des", bi("Desequilíbrio", "Unbalance"), "A", 1.8, 1.7, "low"),
-          tag("pn-tcel", bi("Temp. Célula", "Cell Temp"), "°C", 47.5, 45.9, "low"),
+          tag("pn-des", bi("Desequilíbrio", "Unbalance"), "A", 1.8, 1.7, "low", bi("Desequil.", "Unbalance")),
+          tag("pn-tcel", bi("Temp. Célula", "Cell Temp"), "°C", 47.5, 45.9, "low", bi("T. Célula", "Cell T.")),
         ]),
-      ]),
+      ], CLASS_SHORT.capacitores),
     ]),
   ],
 }
