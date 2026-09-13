@@ -4,14 +4,19 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import * as THREE from "three"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js"
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react"
-import { ASSETS, TOTAL_TAGS, maxRisk, type Risk } from "@/lib/assetData"
+import {
+  INDEX, ROOT_ID, childrenOf, getNode, ringsBelow, tagCountOf,
+  type NodeKind, type Risk, type TreeNode,
+} from "@/lib/assetData"
 
 /*
-  Sunburst 3D — empresa (núcleo) → ativos → equipamentos → tags.
-  Materiais físicos com metal escovado procedural + ambiente PMREM (reflexos
-  sem carregar asset nenhum), arestas técnicas, varredura de radar, partículas
-  de dado, arrasto com inércia, tilt pelo mouse e construção animada.
-  Uma cena, três usos: demo interativa, replay dirigido e prancheta estática.
+  Sunburst 3D navegável — empresa → ativo → classe → equipamento → tag.
+
+  Clicar num nó com filhos desce um nível: ele vira o centro e a subárvore
+  reabre ocupando o círculo inteiro. Clicar numa tag seleciona a série.
+  Materiais físicos com metal escovado procedural + ambiente PMREM, arestas
+  técnicas, varredura de radar, partículas de dado, arrasto com inércia e
+  construção animada a cada mudança de foco.
 */
 
 /* ─── Cores semânticas ──────────────────────────────────────────────────── */
@@ -28,106 +33,118 @@ export function healthColor(health: number, dark: boolean) {
   return dark ? "#454545" : "#cfcfcf"
 }
 
-/* ─── Geometria do sunburst ─────────────────────────────────────────────── */
+const TWO_PI = Math.PI * 2
 
-type Segment = {
+/* ─── Layout: anéis, ângulos e aparência de cada fatia ──────────────────── */
+
+export type Slice = {
+  id: string
+  kind: NodeKind
+  ring: number
   r0: number
   r1: number
   a0: number
   a1: number
   depth: number
   color: string
-  level: 0 | 1 | 2
   risk: Risk
-  tagId?: string
+  hasChildren: boolean
 }
 
-const TWO_PI = Math.PI * 2
+export type Anchor = { id: string; mid: number }
 
-const RING = {
-  asset: { r0: 0.62, r1: 1.14, gap: 0.03 },
-  equip: { r0: 1.22, r1: 1.8, gap: 0.022 },
-  tag: { r0: 1.88, r1: 2.62, gap: 0.018 },
+const OUTER = 2.72
+const RING_GAP = 0.07
+/** anel nunca mais gordo que isto — sem ele, descer a árvore vira um prato */
+const MAX_RING_WIDTH = 0.8
+/** folga angular por anel — os de fora são mais finos, precisam de menos */
+const ANGLE_GAP = [0.032, 0.024, 0.018, 0.014]
+/** raio onde os rótulos do primeiro anel ficam ancorados */
+const LABEL_RADIUS = 3.15
+
+/** Com menos níveis à mostra o miolo abre: o disco vira mostrador, não prato. */
+function ringBands(n: number) {
+  const raw = (OUTER - 0.6 - RING_GAP * (n - 1)) / n
+  const w = Math.min(MAX_RING_WIDTH, raw)
+  const inner = OUTER - (w * n + RING_GAP * (n - 1))
+  const bands = Array.from({ length: n }, (_, i) => {
+    const r0 = inner + i * (w + RING_GAP)
+    return { r0, r1: r0 + w }
+  })
+  return { bands, inner }
 }
 
 function mixHex(a: string, b: string, t: number) {
   return `#${new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString()}`
 }
 
-function buildSegments(dark: boolean): Segment[] {
-  const segs: Segment[] = []
-  const grayEq = dark ? "#4e4e4e" : "#c4c4c4"
-  let cursor = 0
-
-  ASSETS.forEach((asset) => {
-    const assetTags = asset.equipment.reduce((s, e) => s + e.tags.length, 0)
-    const assetArc = (TWO_PI * assetTags) / TOTAL_TAGS
-    const assetRisk: Risk = asset.health < 75 ? "critical" : asset.health < 90 ? "warn" : "low"
-
-    segs.push({
-      ...RING.asset,
-      a0: cursor + RING.asset.gap,
-      a1: cursor + assetArc - RING.asset.gap,
-      depth: 0.12 + ((100 - asset.health) / 100) * 0.55,
-      color: healthColor(asset.health, dark),
-      level: 0,
-      risk: assetRisk,
-    })
-
-    let eqCursor = cursor
-    asset.equipment.forEach((eq) => {
-      const eqArc = (assetArc * eq.tags.length) / assetTags
-      const worst = maxRisk(eq.tags)
-      segs.push({
-        ...RING.equip,
-        a0: eqCursor + RING.equip.gap,
-        a1: eqCursor + eqArc - RING.equip.gap,
-        depth: worst === "low" ? 0.12 : 0.18,
-        color: worst === "low" ? grayEq : mixHex(grayEq, riskColor(worst, dark), 0.45),
-        level: 1,
-        risk: worst,
-      })
-
-      const tagArc = eqArc / eq.tags.length
-      eq.tags.forEach((tag, ti) => {
-        const t0 = eqCursor + ti * tagArc
-        segs.push({
-          ...RING.tag,
-          a0: t0 + RING.tag.gap,
-          a1: t0 + tagArc - RING.tag.gap,
-          depth: tag.risk === "critical" ? 0.46 : tag.risk === "warn" ? 0.28 : 0.14,
-          color: riskColor(tag.risk, dark),
-          level: 2,
-          risk: tag.risk,
-          tagId: tag.id,
-        })
-      })
-      eqCursor += eqArc
-    })
-    cursor += assetArc
-  })
-
-  return segs
+/** altura da extrusão — risco e saúde viram relevo, legível de lado */
+function sliceDepth(node: TreeNode, risk: Risk) {
+  if (node.kind === "tag") return risk === "critical" ? 0.46 : risk === "warn" ? 0.28 : 0.14
+  if (node.kind === "asset") return 0.12 + ((100 - node.health) / 100) * 0.55
+  return risk === "low" ? 0.12 : risk === "critical" ? 0.24 : 0.18
 }
 
-/** âncora do rótulo de saúde de cada ativo — logo além do anel de tags */
-function assetAnchors() {
-  let cursor = 0
-  return ASSETS.map((asset) => {
-    const assetTags = asset.equipment.reduce((s, e) => s + e.tags.length, 0)
-    const arc = (TWO_PI * assetTags) / TOTAL_TAGS
-    const mid = cursor + arc / 2
-    cursor += arc
-    return { id: asset.id, pos: new THREE.Vector3(Math.cos(mid) * 3.2, Math.sin(mid) * 3.2, 0.12) }
-  })
+function sliceColor(node: TreeNode, risk: Risk, dark: boolean) {
+  if (node.kind === "tag") return riskColor(risk, dark)
+  if (node.kind === "asset") return healthColor(node.health, dark)
+  // classe e equipamento herdam um tom do pior risco abaixo — o olho sobe a árvore
+  const base = node.kind === "class" ? (dark ? "#414141" : "#d2d2d2") : dark ? "#4e4e4e" : "#c4c4c4"
+  return risk === "low" ? base : mixHex(base, riskColor(risk, dark), node.kind === "class" ? 0.38 : 0.48)
 }
 
-function arcGeometry(seg: Segment) {
+/** Monta as fatias da subárvore do nó em foco, ocupando o círculo inteiro. */
+export function buildLayout(
+  focusId: string,
+  dark: boolean
+): { slices: Slice[]; anchors: Anchor[]; inner: number } {
+  const focus = getNode(focusId) ?? getNode(ROOT_ID)!
+  const rings = Math.max(1, ringsBelow[focus.kind])
+  const { bands, inner } = ringBands(rings)
+  // com poucos anéis o relevo some na largura — compensa na altura
+  const depthScale = 1 + (4 - rings) * 0.22
+  const slices: Slice[] = []
+  const anchors: Anchor[] = []
+
+  const walk = (node: TreeNode, ring: number, start: number, arc: number) => {
+    const kids = childrenOf(node)
+    if (!kids.length || ring >= bands.length) return
+    const total = Math.max(1, tagCountOf(node.id))
+    let cursor = start
+
+    for (const kid of kids) {
+      const share = (Math.max(1, tagCountOf(kid.id)) / total) * arc
+      const entry = INDEX.get(kid.id)!
+      const gap = Math.min(ANGLE_GAP[ring] ?? 0.014, share * 0.22)
+      slices.push({
+        id: kid.id,
+        kind: kid.kind,
+        ring,
+        r0: bands[ring].r0,
+        r1: bands[ring].r1,
+        a0: cursor + gap,
+        a1: cursor + share - gap,
+        depth: sliceDepth(kid, entry.risk) * depthScale,
+        color: sliceColor(kid, entry.risk, dark),
+        risk: entry.risk,
+        hasChildren: childrenOf(kid).length > 0,
+      })
+      if (ring === 0) anchors.push({ id: kid.id, mid: cursor + share / 2 })
+      walk(kid, ring + 1, cursor, share)
+      cursor += share
+    }
+  }
+
+  walk(focus, 0, 0, TWO_PI)
+  return { slices, anchors, inner }
+}
+
+function arcGeometry(s: Slice) {
   const shape = new THREE.Shape()
-  shape.absarc(0, 0, seg.r1, seg.a0, seg.a1, false)
-  shape.absarc(0, 0, seg.r0, seg.a1, seg.a0, true)
+  shape.absarc(0, 0, s.r1, s.a0, s.a1, false)
+  shape.absarc(0, 0, s.r0, s.a1, s.a0, true)
   return new THREE.ExtrudeGeometry(shape, {
-    depth: seg.depth,
+    depth: s.depth,
     curveSegments: 28,
     bevelEnabled: true,
     bevelThickness: 0.02,
@@ -148,7 +165,10 @@ function tickPoints(r0: number, r1: number, n: number) {
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TWO_PI
     const rr1 = i % 3 === 0 ? r1 + 0.05 : r1
-    pts.push(new THREE.Vector3(Math.cos(a) * r0, Math.sin(a) * r0, 0), new THREE.Vector3(Math.cos(a) * rr1, Math.sin(a) * rr1, 0))
+    pts.push(
+      new THREE.Vector3(Math.cos(a) * r0, Math.sin(a) * r0, 0),
+      new THREE.Vector3(Math.cos(a) * rr1, Math.sin(a) * rr1, 0)
+    )
   }
   return pts
 }
@@ -170,7 +190,9 @@ function makeBrushed(size = 512) {
     const x = Math.random() * size
     const w = 30 + Math.random() * 220
     const light = Math.random() < 0.5
-    ctx.strokeStyle = light ? `rgba(255,255,255,${0.05 + Math.random() * 0.2})` : `rgba(0,0,0,${0.04 + Math.random() * 0.16})`
+    ctx.strokeStyle = light
+      ? `rgba(255,255,255,${0.05 + Math.random() * 0.2})`
+      : `rgba(0,0,0,${0.04 + Math.random() * 0.16})`
     ctx.lineWidth = Math.random() < 0.8 ? 1 : 2
     ctx.beginPath()
     ctx.moveTo(x, y)
@@ -266,10 +288,15 @@ const sweepFrag = /* glsl */ `
   }
 `
 
-function RadarSweep({ dark, motionOK, speed = 0.75 }: { dark: boolean; motionOK: boolean; speed?: number }) {
+function RadarSweep({
+  dark, motionOK, inner, speed = 0.75,
+}: { dark: boolean; motionOK: boolean; inner: number; speed?: number }) {
   const ref = useRef<THREE.Mesh>(null)
   const uniforms = useMemo(
-    () => ({ uColor: { value: new THREE.Color(dark ? "#ffffff" : "#1a1a1a") }, uOpacity: { value: dark ? 0.16 : 0.12 } }),
+    () => ({
+      uColor: { value: new THREE.Color(dark ? "#ffffff" : "#1a1a1a") },
+      uOpacity: { value: dark ? 0.16 : 0.12 },
+    }),
     [dark]
   )
   useFrame((_, dt) => {
@@ -277,7 +304,7 @@ function RadarSweep({ dark, motionOK, speed = 0.75 }: { dark: boolean; motionOK:
   })
   return (
     <mesh ref={ref} position={[0, 0, 0.02]} renderOrder={10} raycast={() => null}>
-      <ringGeometry args={[0.55, 2.78, 64, 1, 0, SWEEP_ARC]} />
+      <ringGeometry args={[inner - 0.05, OUTER + 0.06, 64, 1, 0, SWEEP_ARC]} />
       <shaderMaterial
         vertexShader={sweepVert}
         fragmentShader={sweepFrag}
@@ -294,7 +321,9 @@ function RadarSweep({ dark, motionOK, speed = 0.75 }: { dark: boolean; motionOK:
 
 /* ─── Partículas de dado subindo do disco ───────────────────────────────── */
 
-function Motes({ dark, motionOK, count = 110, glow }: { dark: boolean; motionOK: boolean; count?: number; glow: THREE.Texture }) {
+function Motes({
+  dark, motionOK, count = 110, glow,
+}: { dark: boolean; motionOK: boolean; count?: number; glow: THREE.Texture }) {
   const ref = useRef<THREE.Points>(null)
   const { positions, speeds } = useMemo(() => {
     const positions = new Float32Array(count * 3)
@@ -349,18 +378,22 @@ export type ReplayDriver = { tRef: RefObject<number>; tagId: string }
 export type SunburstSceneProps = {
   dark: boolean
   motionOK: boolean
+  /** nó no centro do disco — a subárvore dele é o que aparece */
+  focusId?: string
+  /** clique num nó com filhos */
+  onFocus?: (id: string) => void
   /** tag selecionada (levanta e pulsa) */
   selected?: string | null
   onSelect?: (id: string) => void
-  /** hover, clique, arrasto e tilt pelo mouse */
+  /** hover, clique, arrasto e tilt pelo ponteiro */
   interactive?: boolean
-  /** rótulos DOM projetados por ativo */
+  /** rótulos DOM projetados para o primeiro anel */
   labelRefs?: RefObject<Map<string, HTMLDivElement | null>>
   /** replay dirigido por relógio externo: a tag cresce e avermelha */
   replay?: ReplayDriver
-  /** construção animada: as fatias sobem do plano em cascata */
+  /** construção animada das fatias */
   intro?: boolean
-  /** dispara a construção (ex.: quando o bloco entra em tela); antes disso o disco fica rente */
+  /** dispara a construção (ex.: quando o bloco entra em tela) */
   introPlay?: boolean
   /** velocidade base do giro (rad/s) */
   spin?: number
@@ -372,11 +405,12 @@ const easeOutBack = (x: number) => {
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
 }
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x))
-const clampRange = (v: number, lo: number, hi: number) => (hi < lo ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)))
+const clampRange = (v: number, lo: number, hi: number) =>
+  hi < lo ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v))
 
 export function SunburstScene({
-  dark, motionOK, selected = null, onSelect, interactive = false, labelRefs, replay,
-  intro = false, introPlay = true, spin = 0.07,
+  dark, motionOK, focusId = ROOT_ID, onFocus, selected = null, onSelect,
+  interactive = false, labelRefs, replay, intro = false, introPlay = true, spin = 0.07,
 }: SunburstSceneProps) {
   const tiltRef = useRef<THREE.Group>(null)
   const spinRef = useRef<THREE.Group>(null)
@@ -385,19 +419,30 @@ export function SunburstScene({
   const [hovered, setHovered] = useState<string | null>(null)
   const { gl } = useThree()
 
-  const segments = useMemo(() => buildSegments(dark), [dark])
-  const geometries = useMemo(() => segments.map(arcGeometry), [segments])
+  const { slices, anchors, inner } = useMemo(() => buildLayout(focusId, dark), [focusId, dark])
+  const geometries = useMemo(() => slices.map(arcGeometry), [slices])
   const edgeGeometries = useMemo(() => geometries.map((g) => new THREE.EdgesGeometry(g, 24)), [geometries])
-  const anchors = useMemo(assetAnchors, [])
+  const anchorVectors = useMemo(
+    () =>
+      anchors.map((a) => ({
+        id: a.id,
+        pos: new THREE.Vector3(Math.cos(a.mid) * LABEL_RADIUS, Math.sin(a.mid) * LABEL_RADIUS, 0.12),
+      })),
+    [anchors]
+  )
   const textures = useMemo(getTextures, [])
   const proj = useMemo(() => new THREE.Vector3(), [])
   const guideGeos = useMemo(
     () => ({
-      rings: [1.18, 1.84, 2.7].map((r) => new THREE.BufferGeometry().setFromPoints(circlePoints(r))),
-      ticks: new THREE.BufferGeometry().setFromPoints(tickPoints(2.74, 2.82, 72)),
+      rings: [inner - 0.03, OUTER + 0.04].map((r) =>
+        new THREE.BufferGeometry().setFromPoints(circlePoints(r))
+      ),
+      ticks: new THREE.BufferGeometry().setFromPoints(tickPoints(OUTER + 0.08, OUTER + 0.16, 72)),
     }),
-    []
+    [inner]
   )
+  // ancestrais da tag selecionada — o caminho inteiro acende junto
+  const litPath = useMemo(() => new Set(selected ? INDEX.get(selected)?.ancestors ?? [] : []), [selected])
   const replayColors = useMemo(
     () => ({
       gray: new THREE.Color(riskColor("low", dark)),
@@ -409,7 +454,13 @@ export function SunburstScene({
 
   useEffect(() => () => geometries.forEach((g) => g.dispose()), [geometries])
   useEffect(() => () => edgeGeometries.forEach((g) => g.dispose()), [edgeGeometries])
-  useEffect(() => () => { guideGeos.rings.forEach((g) => g.dispose()); guideGeos.ticks.dispose() }, [guideGeos])
+  useEffect(
+    () => () => {
+      guideGeos.rings.forEach((g) => g.dispose())
+      guideGeos.ticks.dispose()
+    },
+    [guideGeos]
+  )
 
   useEffect(() => {
     if (!interactive) return
@@ -417,10 +468,15 @@ export function SunburstScene({
     return () => { document.body.style.cursor = "" }
   }, [hovered, interactive])
 
-  // arrasto com inércia + presença do ponteiro (tilt)
   const clockRef = useRef(0)
   const spawnRef = useRef(-1)
   const drag = useRef({ active: false, lastX: 0, lastT: 0, vel: 0, moved: 0, lastInteraction: -10, inside: false })
+
+  // cada mudança de foco reabre o disco com a construção animada
+  useEffect(() => {
+    spawnRef.current = -1
+    setHovered(null)
+  }, [focusId])
 
   useEffect(() => {
     if (!interactive) return
@@ -478,7 +534,6 @@ export function SunburstScene({
     const t = state.clock.elapsedTime
     const dt = Math.min(rawDt, 0.05)
     clockRef.current = t
-    // a construção só começa no frame em que `introPlay` vira true (entrada em tela)
     if (intro && introPlay && spawnRef.current < 0) spawnRef.current = t
     const age = t - spawnRef.current
     const d = drag.current
@@ -506,23 +561,23 @@ export function SunburstScene({
 
     const replayT = replay ? (replay.tRef.current ?? 0) : 0
 
-    segments.forEach((seg, i) => {
+    slices.forEach((s, i) => {
       const mesh = meshes.current[i]
       if (!mesh) return
       const mat = mesh.material as THREE.MeshPhysicalMaterial
-      const isSel = !!seg.tagId && seg.tagId === selected
-      const isHov = !!seg.tagId && seg.tagId === hovered
+      const isSel = s.id === selected
+      const isHov = s.id === hovered
+      const onPath = litPath.has(s.id)
 
       // construção: cada fatia sobe do plano em cascata angular
       let build = 1
       if (intro && motionOK) {
-        const delay = (seg.a0 / TWO_PI) * 0.9 + seg.level * 0.2
-        build = spawnRef.current < 0 ? 0.02 : Math.max(0.02, easeOutBack(clamp01((age - delay) / 0.8)))
+        const delay = (s.a0 / TWO_PI) * 0.7 + s.ring * 0.16
+        build = spawnRef.current < 0 ? 0.02 : Math.max(0.02, easeOutBack(clamp01((age - delay) / 0.75)))
       }
 
-      // altura
       let grow = 0
-      if (replay && seg.tagId === replay.tagId) {
+      if (replay && s.id === replay.tagId) {
         grow = clamp01((replayT - 3) / 5.5)
         if (grow < 0.5) mat.color.copy(replayColors.gray).lerp(replayColors.amber, grow * 2)
         else mat.color.copy(replayColors.amber).lerp(replayColors.red, (grow - 0.5) * 2)
@@ -530,29 +585,32 @@ export function SunburstScene({
         mat.emissiveIntensity = grow * 0.55 + (replayT > 8.5 ? 0.25 + 0.25 * Math.sin(t * 6) : 0)
         mat.opacity = replayT > 8.5 ? 0.8 + 0.2 * Math.sin(t * 3) : 0.96
       } else {
-        const base = seg.risk === "critical" ? 0.28 : seg.risk === "warn" ? 0.2 : 0
+        const base = s.risk === "critical" ? 0.28 : s.risk === "warn" ? 0.2 : 0
         const pulse = motionOK ? 0.5 + 0.5 * Math.sin(t * 2.2 + i * 0.7) : 1
-        mat.emissiveIntensity = isSel ? 0.45 + 0.45 * pulse : base * (0.65 + 0.35 * pulse)
-        mat.opacity = isSel || isHov ? 1 : seg.level === 2 ? 0.94 : 0.97
+        mat.emissiveIntensity = isSel
+          ? 0.45 + 0.45 * pulse
+          : onPath
+            ? 0.18 + base * 0.5
+            : base * (0.65 + 0.35 * pulse)
+        mat.opacity = isSel || isHov ? 1 : s.ring >= 2 ? 0.94 : 0.97
       }
       mesh.scale.z = build * (1 + grow * 2.6)
 
-      // levanta do plano quando selecionada / sob o mouse — o suficiente para
-      // destacar sem soltar a fatia do anel
-      const rise = isSel ? 0.17 : isHov ? 0.09 : 0
+      // levanta do plano quando selecionada / sob o ponteiro
+      const rise = isSel ? 0.17 : isHov ? 0.09 : onPath ? 0.04 : 0
       mesh.position.z += (rise - mesh.position.z) * Math.min(1, dt * 8)
 
       const line = edges.current[i]
       if (line) {
         const lm = line.material as THREE.LineBasicMaterial
-        lm.opacity = isSel ? 0.95 : isHov ? 0.6 : dark ? 0.14 : 0.2
+        lm.opacity = isSel ? 0.95 : isHov ? 0.6 : onPath ? 0.42 : dark ? 0.14 : 0.2
       }
     })
 
-    // rótulos de saúde acompanham o giro — projeção 3D → tela
+    // rótulos do primeiro anel acompanham o giro — projeção 3D → tela
     if (labelRefs?.current && spinRef.current) {
       spinRef.current.updateMatrixWorld()
-      anchors.forEach(({ id, pos }) => {
+      anchorVectors.forEach(({ id, pos }) => {
         const el = labelRefs.current!.get(id)
         if (!el) return
         proj.copy(pos).applyMatrix4(spinRef.current!.matrixWorld).project(state.camera)
@@ -567,14 +625,17 @@ export function SunburstScene({
     }
   })
 
-  const handleClick = (tagId: string) => (e: ThreeEvent<MouseEvent>) => {
+  const handleClick = (s: Slice) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
     if (drag.current.moved > 6) return // foi arrasto, não clique
-    onSelect?.(tagId)
+    if (s.hasChildren) onFocus?.(s.id)
+    else onSelect?.(s.id)
   }
 
   const fg = dark ? "#ffffff" : "#111111"
   const hubColor = dark ? "#2a2a2a" : "#e2e2e2"
+  // o núcleo acompanha a abertura do miolo, mas nunca vira um prato
+  const hubR = Math.min(0.5, inner - 0.12)
 
   return (
     <group ref={tiltRef} rotation={[-0.95, 0, 0]}>
@@ -608,18 +669,18 @@ export function SunburstScene({
         </lineSegments>
 
         {/* fatias */}
-        {segments.map((seg, i) => (
+        {slices.map((s, i) => (
           <mesh
-            key={i}
+            key={s.id}
             geometry={geometries[i]}
             ref={(m) => { meshes.current[i] = m }}
-            onClick={interactive && seg.tagId ? handleClick(seg.tagId) : undefined}
-            onPointerOver={interactive && seg.tagId ? (e) => { e.stopPropagation(); setHovered(seg.tagId!) } : undefined}
-            onPointerOut={interactive && seg.tagId ? () => setHovered((h) => (h === seg.tagId ? null : h)) : undefined}
+            onClick={interactive ? handleClick(s) : undefined}
+            onPointerOver={interactive ? (e) => { e.stopPropagation(); setHovered(s.id) } : undefined}
+            onPointerOut={interactive ? () => setHovered((h) => (h === s.id ? null : h)) : undefined}
           >
             <meshPhysicalMaterial
-              color={seg.color}
-              emissive={seg.risk === "low" ? (dark ? "#bdbdbd" : "#000000") : seg.color}
+              color={s.color}
+              emissive={s.risk === "low" ? (dark ? "#bdbdbd" : "#000000") : s.color}
               emissiveIntensity={0}
               metalness={0.62}
               roughness={0.62}
@@ -630,18 +691,22 @@ export function SunburstScene({
               clearcoatRoughness={0.3}
               envMapIntensity={dark ? 1 : 0.7}
               transparent
-              opacity={seg.level === 2 ? 0.94 : 0.97}
+              opacity={s.ring >= 2 ? 0.94 : 0.97}
               side={THREE.DoubleSide}
             />
-            <lineSegments geometry={edgeGeometries[i]} ref={(l) => { edges.current[i] = l }} raycast={() => null}>
+            <lineSegments
+              geometry={edgeGeometries[i]}
+              ref={(l) => { edges.current[i] = l }}
+              raycast={() => null}
+            >
               <lineBasicMaterial color={fg} transparent opacity={dark ? 0.14 : 0.2} />
             </lineSegments>
           </mesh>
         ))}
 
-        {/* núcleo usinado — a empresa */}
+        {/* núcleo usinado — o nó em foco */}
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.06]} raycast={() => null}>
-          <cylinderGeometry args={[0.5, 0.52, 0.12, 64]} />
+          <cylinderGeometry args={[hubR, hubR + 0.02, 0.12, 64]} />
           <meshPhysicalMaterial
             color={hubColor}
             metalness={0.85}
@@ -653,11 +718,11 @@ export function SunburstScene({
           />
         </mesh>
         <mesh position={[0, 0, 0.125]} raycast={() => null}>
-          <ringGeometry args={[0.36, 0.395, 64]} />
+          <ringGeometry args={[hubR - 0.14, hubR - 0.105, 64]} />
           <meshBasicMaterial color={fg} transparent opacity={dark ? 0.45 : 0.35} />
         </mesh>
 
-        <RadarSweep dark={dark} motionOK={motionOK} />
+        <RadarSweep dark={dark} motionOK={motionOK} inner={inner} />
         {textures && <Motes dark={dark} motionOK={motionOK} glow={textures.glow} />}
       </group>
     </group>

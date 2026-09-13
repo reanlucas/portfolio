@@ -65,9 +65,9 @@ export const en: Dictionary = {
     overline: "Operations",
     title: "Asset risk, visible at a glance",
     intro:
-      "Hydro plants and substations hold the most expensive assets in the power sector. The platform I built consolidates everything into a navigable hierarchy — company → asset → equipment → tag — with health per asset and neural detection validated by classic ML.",
+      "Hydro plants and substations hold the most expensive assets in the power sector. The platform I built consolidates everything into a navigable hierarchy — company → asset → equipment class → equipment → tag — with health per asset and neural detection validated by classic ML.",
     hook: "One of these tags is days away from becoming an emergency. The model already knows which.",
-    hookAction: " Click a slice and see the prediction against the sensor.",
+    hookAction: " Drill down through the slices to the tag and see the prediction against the sensor.",
     cta: "Full case study",
   },
 
@@ -230,9 +230,16 @@ export const en: Dictionary = {
   },
 
   demo: {
-    hierarchy: "Company → asset → equipment → tag",
-    clickTag: "Click a tag · drag to rotate",
-    assetsTags: (assets: number, tags: number) => `${assets} assets · ${tags} tags`,
+    hierarchy: "Company → asset → class → equipment → tag",
+    drillHint: "Click to drill down · drag to rotate",
+    back: "Back",
+    levels: {
+      asset: "Assets",
+      class: "Classes",
+      equipment: "Equipment",
+      tag: "Tags",
+    },
+    counts: (n: number, label: string) => `${n} ${label.toLowerCase()}`,
     panel: { tag: "Tag", pred: "Predicted", real: "Actual", deviation: "Deviation" },
     risk: { low: "Low risk", warn: "Warning", critical: "Critical" },
     legendHealth: "% = asset health",
@@ -452,7 +459,7 @@ export const en: Dictionary = {
       "Hydro plant and substation assets fail — and when they fail without warning, the cost is brutal: power unavailability, emergency maintenance, physical and regulatory risk. The traditional model is reactive (fix after it breaks) or blindly preventive (replace good parts on a calendar). One of Brazil's largest energy companies needed a third way: knowing before — and having it integrated with the corporate ecosystem that already exists.",
     solutionLabel: "The solution",
     solution:
-      "A cloud asset and risk management platform (GCP, with AlloyDB at the data core): AI detection with recurrent and convolutional neural networks (LSTM Autoencoders, CNNs) validated by classic ML models — Random Forest and KNN — in an ensemble that assigns a risk score per telemetry tag. The company → asset → equipment → tag hierarchy consolidates everything into a single view, with a health KPI per asset, and an AI agent fires the alerts with context over WhatsApp and e-mail.",
+      "A cloud asset and risk management platform (GCP, with AlloyDB at the data core): AI detection with recurrent and convolutional neural networks (LSTM Autoencoders, CNNs) validated by classic ML models — Random Forest and KNN — in an ensemble that assigns a risk score per telemetry tag. The company → asset → equipment class → equipment → tag hierarchy consolidates everything into a single view, with a health KPI per asset, and an AI agent fires the alerts with context over WhatsApp and e-mail.",
     pipelineLabel: "The pipeline — from sensor to alert",
     pipeline: [
       { label: "Sensors", detail: "vibration · temperature · current" },
@@ -462,7 +469,7 @@ export const en: Dictionary = {
       { label: "Risk score", detail: "ensemble consensus per tag" },
       { label: "AI agent", detail: "fires WhatsApp and e-mail" },
     ],
-    exploreLabel: "Explore — click a tag on the sunburst",
+    exploreLabel: "Explore — drill down through the sunburst",
     integrationsLabel: "Corporate integrations",
     integrations:
       "A real platform doesn't live on an island: authentication via Keycloak and internal corporate systems, orders and master data from SAP and Hitachi NM, history in Oracle SQL, data served by data lakes and virtualised with Denodo. The model is only the heart — the value shows up when it talks to the whole organism.",

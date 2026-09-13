@@ -41,9 +41,11 @@ difference is who owns the outcome.
 
 The site demonstrates, with data and animation, the kind of system I build:
 
-- **Interactive 3D asset-risk sunburst** — company → asset → equipment → tag hierarchy, in
-  brushed metal with real reflections, a radar sweep and drag with inertia. Click a tag and see
-  the model's prediction against the sensor's actual value, with the deviation computed live.
+- **Navigable 3D asset-risk sunburst** — the whole tree in five levels: company → asset (hydro
+  plants and substations) → equipment class (generator, cooling system, capacitor bank…) →
+  equipment → tag. Click a ring and it becomes the centre, reopening its subtree; click a tag and
+  see the model's prediction against the sensor's actual value. Brushed metal with real
+  reflections, a radar sweep and drag with inertia.
 - **Predicted × actual** — charts with a normality envelope learned by neural networks
   (RNN/LSTM, CNN, autoencoders), highlighting where the sensor escapes the forecast.
 - **Detection ensemble** — an anomaly only becomes an alert when classic ML (Random Forest, KNN)
@@ -72,7 +74,7 @@ src/
   i18n/                locale config + pt/en dictionaries
   components/viz/      3D sunburst, telemetry, agent
   components/home/     hero, risk, FDE value proposition, skills
-  lib/assetData.ts     bilingual illustrative platform data
+  lib/assetData.ts     bilingual illustrative platform tree (5 levels)
 ```
 
 Public routes:

@@ -1,7 +1,7 @@
 "use client"
 
 import { BannerSunburst, TagChart } from "@/components/projetos/assetMonitorDemo"
-import { ALL_TAGS, ASSETS, EQUIPMENT_COUNT, DEFAULT_TAG, detectorScores, DETECTORS } from "@/lib/assetData"
+import { ALL_TAGS, ASSETS, CLASS_COUNT, EQUIPMENT_COUNT, DEFAULT_TAG, detectorScores, DETECTORS } from "@/lib/assetData"
 
 /*
   Prancheta 1200×627 (proporção de post do LinkedIn) — visão completa da
@@ -65,7 +65,7 @@ export default function BannerBoard() {
           {/* Sunburst menor + legenda */}
           <div className="col-span-4 border-r border-white/10 flex flex-col">
             <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-white/50 px-5 pt-3">
-              Empresa → ativo → equipamento → tag
+              Empresa → ativo → classe → equipamento → tag
             </p>
             <div className="relative flex-1 min-h-0">
               <BannerSunburst className="absolute inset-0" />
@@ -73,7 +73,10 @@ export default function BannerBoard() {
                 <div className="text-center bg-[#0d0d0d]/80 px-3 py-1.5">
                   <p className="font-display text-[10px] font-extrabold tracking-[0.2em]">ENERGIA S.A.</p>
                   <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-white/50">
-                    {ASSETS.length} ativos · {EQUIPMENT_COUNT} equipamentos · {ALL_TAGS.length} tags
+                    {ASSETS.length} ativos · {CLASS_COUNT} classes
+                  </p>
+                  <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-white/50">
+                    {EQUIPMENT_COUNT} equipamentos · {ALL_TAGS.length} tags
                   </p>
                 </div>
               </div>
@@ -89,7 +92,7 @@ export default function BannerBoard() {
             {/* Painel da tag */}
             <div className="grid grid-cols-4 border-t border-white/10 divide-x divide-white/10">
               {[
-                ["Tag", tag.name.pt, tag.asset.pt],
+                ["Tag", tag.name.pt, tag.where.pt],
                 ["Predição", `${tag.pred}${tag.unit}`, "modelo"],
                 ["Real", `${tag.real}${tag.unit}`, "sensor"],
                 ["Desvio", `+${deviation.toFixed(1)}%`, "crítico"],
@@ -109,7 +112,7 @@ export default function BannerBoard() {
           <div className="col-span-5 flex flex-col min-h-0">
             <div className="flex items-center justify-between px-5 pt-3">
               <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-white/50">
-                {tag.asset.pt} · {tag.name.pt} — predição × real
+                {tag.where.pt} · {tag.name.pt} — predição × real
               </p>
               <span className="font-mono text-[9px] uppercase tracking-widest text-white/60 flex items-center gap-3">
                 <span className="flex items-center gap-1"><svg width="14" height="2"><line x1="0" x2="14" y1="1" y2="1" stroke="currentColor" strokeWidth="2" /></svg>real</span>

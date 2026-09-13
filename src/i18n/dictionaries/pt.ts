@@ -68,9 +68,9 @@ export const pt = {
     overline: "Operação",
     title: "Risco de ativos, visível de uma vez",
     intro:
-      "Usinas e subestações concentram os ativos mais caros do setor elétrico. A plataforma que construí consolida tudo numa hierarquia navegável — empresa → ativo → equipamento → tag — com saúde por ativo e detecção neural validada por ML clássico.",
+      "Usinas e subestações concentram os ativos mais caros do setor elétrico. A plataforma que construí consolida tudo numa hierarquia navegável — empresa → ativo → classe de equipamento → equipamento → tag — com saúde por ativo e detecção neural validada por ML clássico.",
     hook: "Uma dessas tags está a dias de virar emergência. O modelo já sabe qual.",
-    hookAction: " Clique numa fatia e veja a predição contra o sensor.",
+    hookAction: " Desça a árvore clicando nas fatias até a tag e veja a predição contra o sensor.",
     cta: "Estudo de caso completo",
   },
 
@@ -233,9 +233,16 @@ export const pt = {
   },
 
   demo: {
-    hierarchy: "Empresa → ativo → equipamento → tag",
-    clickTag: "Clique numa tag · arraste para girar",
-    assetsTags: (assets: number, tags: number) => `${assets} ativos · ${tags} tags`,
+    hierarchy: "Empresa → ativo → classe → equipamento → tag",
+    drillHint: "Clique para descer · arraste para girar",
+    back: "Voltar",
+    levels: {
+      asset: "Ativos",
+      class: "Classes",
+      equipment: "Equipamentos",
+      tag: "Tags",
+    },
+    counts: (n: number, label: string) => `${n} ${label.toLowerCase()}`,
     panel: { tag: "Tag", pred: "Predição", real: "Real", deviation: "Desvio" },
     risk: { low: "Baixo risco", warn: "Atenção", critical: "Crítico" },
     legendHealth: "% = saúde do ativo",
@@ -455,7 +462,7 @@ export const pt = {
       "Ativos de UHEs e subestações falham — e quando falham sem aviso, o custo é brutal: indisponibilidade de energia, manutenção emergencial, risco físico e regulatório. O modelo tradicional é reativo (conserta depois que quebra) ou preventivo cego (troca peça boa por calendário). Uma das maiores companhias de energia do Brasil precisava de uma terceira via: saber antes — e ter isso integrado ao ecossistema corporativo que já existe.",
     solutionLabel: "A solução",
     solution:
-      "Uma plataforma de gestão de ativos e riscos em nuvem (GCP, com AlloyDB no núcleo de dados): detecção por IA com redes neurais recorrentes e convolucionais (LSTM Autoencoders, CNNs) validada por modelos clássicos de ML — Random Forest e KNN — num ensemble que atribui score de risco por tag de telemetria. A hierarquia empresa → ativo → equipamento → tag consolida tudo numa visão só, com KPI de saúde por ativo, e um agente de IA dispara os alertas com contexto por WhatsApp e e-mail.",
+      "Uma plataforma de gestão de ativos e riscos em nuvem (GCP, com AlloyDB no núcleo de dados): detecção por IA com redes neurais recorrentes e convolucionais (LSTM Autoencoders, CNNs) validada por modelos clássicos de ML — Random Forest e KNN — num ensemble que atribui score de risco por tag de telemetria. A hierarquia empresa → ativo → classe de equipamento → equipamento → tag consolida tudo numa visão só, com KPI de saúde por ativo, e um agente de IA dispara os alertas com contexto por WhatsApp e e-mail.",
     pipelineLabel: "O pipeline — do sensor ao alerta",
     pipeline: [
       { label: "Sensores", detail: "vibração · temperatura · corrente" },
@@ -465,7 +472,7 @@ export const pt = {
       { label: "Score de risco", detail: "consenso do ensemble por tag" },
       { label: "Agente de IA", detail: "dispara WhatsApp e e-mail" },
     ],
-    exploreLabel: "Explore — clique numa tag do sunburst",
+    exploreLabel: "Explore — desça a árvore clicando no sunburst",
     integrationsLabel: "Integrações corporativas",
     integrations:
       "Plataforma de verdade não vive em ilha: autenticação via Keycloak e sistemas corporativos internos, ordens e cadastros do SAP e do Hitachi NM, históricos em Oracle SQL, dados servidos por data lakes e virtualização com Denodo. O modelo é só o coração — o valor aparece quando ele conversa com o organismo inteiro.",

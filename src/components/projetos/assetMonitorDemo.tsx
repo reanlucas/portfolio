@@ -1,22 +1,24 @@
 "use client"
 
 import { motion, AnimatePresence, useInView } from "motion/react"
-import { useMemo, useRef, useEffect, useState, type RefObject } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react"
 import { useTheme } from "next-themes"
 import { FaWhatsapp } from "react-icons/fa"
-import { Bot, Check } from "lucide-react"
+import { Bot, Check, CornerLeftUp } from "lucide-react"
 import { Reveal } from "@/components/motion/primitives"
 import { useLocale } from "@/i18n/context"
 import { SunburstCanvas, healthColor, riskColor } from "@/components/viz/sunburst3D"
 import {
-  ALL_TAGS, ASSETS, COMPANY, DEFAULT_TAG, DETECTORS, REPLAY_TAG_ID, SERIES_N,
-  detectorScores, mulberry32, pick, tagSeries, type FlatTag, type Risk,
+  ALL_TAGS, ASSETS, COMPANY_NAME, DEFAULT_TAG, DETECTORS, INDEX, REPLAY_TAG_ID, ROOT_ID, SERIES_N, TREE,
+  childrenOf, detectorScores, getNode, mulberry32, pathTo, pick, riskOf, tagCountOf, tagSeries, worstTagIn,
+  type FlatTag, type NodeKind, type Risk, type TagNode, type TreeNode,
 } from "@/lib/assetData"
 
 /*
   Demo interativa do monitoramento — dados ilustrativos.
-  Sunburst 3D em quatro níveis; clique numa tag e o painel mostra predição ×
-  valor real, o gráfico redesenha a série e o ensemble vota de novo.
+  O sunburst navega a árvore: empresa → ativo → classe de equipamento →
+  equipamento → tag. Clicar num nó com filhos desce um nível; clicar numa
+  tag redesenha o gráfico de predição × real e revota o ensemble.
 */
 
 const riskVar: Record<Risk, string> = {
@@ -24,6 +26,8 @@ const riskVar: Record<Risk, string> = {
   warn: "var(--risk-warning)",
   critical: "var(--risk-critical)",
 }
+
+const LEVEL_ORDER: Exclude<NodeKind, "company">[] = ["asset", "class", "equipment", "tag"]
 
 function useMotionOK() {
   const [motionOK, setMotionOK] = useState(true)
@@ -37,31 +41,48 @@ function useMotionOK() {
   return motionOK
 }
 
-/** rótulos DOM dos ativos (nome + saúde) — posicionados pela cena a cada frame */
-function AssetHealthLabels({ dark, labelRefs }: { dark: boolean; labelRefs: RefObject<Map<string, HTMLDivElement | null>> }) {
+/* ─── Rótulos do primeiro anel — posicionados pela cena a cada frame ────── */
+
+function RingLabels({
+  nodes, dark, labelRefs,
+}: {
+  nodes: TreeNode[]
+  dark: boolean
+  labelRefs: RefObject<Map<string, HTMLDivElement | null>>
+}) {
   const { locale } = useLocale()
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {ASSETS.map((a) => (
-        <div
-          key={a.id}
-          ref={(el) => { labelRefs.current.set(a.id, el) }}
-          className="absolute left-0 top-0 will-change-transform"
-          style={{ transform: "translate3d(-999px,-999px,0)", opacity: 0 }}
-        >
-          <div className="-translate-x-1/2 -translate-y-1/2 whitespace-nowrap border border-border/70 dark:border-white/15 bg-background/80 backdrop-blur-[2px] px-2 py-1">
-            <span className="font-mono text-[8.5px] uppercase tracking-[0.15em] text-muted-foreground">
-              {pick(a.name, locale)}
-            </span>
-            <span
-              className="font-mono text-[9px] font-bold ml-1.5"
-              style={{ color: a.health < 90 ? healthColor(a.health, dark) : "var(--foreground)" }}
-            >
-              {a.health}%
-            </span>
+      {nodes.map((node) => {
+        const risk = riskOf(node.id)
+        const badge =
+          node.kind === "asset" ? `${node.health}%`
+          : node.kind === "tag" ? `${node.real}${node.unit}`
+          : String(tagCountOf(node.id))
+        const badgeColor =
+          node.kind === "asset"
+            ? node.health < 90 ? healthColor(node.health, dark) : "var(--foreground)"
+            : risk !== "low" ? riskColor(risk, dark) : "var(--foreground)"
+
+        return (
+          <div
+            key={node.id}
+            ref={(el) => { labelRefs.current.set(node.id, el) }}
+            className="absolute left-0 top-0 will-change-transform"
+            style={{ transform: "translate3d(-999px,-999px,0)", opacity: 0 }}
+          >
+            <div className="-translate-x-1/2 -translate-y-1/2 whitespace-nowrap border border-border/70 dark:border-white/15 bg-background/80 backdrop-blur-[2px] px-2 py-1">
+              <span className="font-mono text-[8.5px] uppercase tracking-[0.15em] text-muted-foreground">
+                {pick(node.name, locale)}
+              </span>
+              <span className="font-mono text-[9px] font-bold ml-1.5" style={{ color: badgeColor }}>
+                {badge}
+              </span>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -86,7 +107,7 @@ export function TagChart({ tag }: { tag: FlatTag }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img"
-      aria-label={t.demo.chart.aria(pick(tag.name, locale), pick(tag.asset, locale))}>
+      aria-label={t.demo.chart.aria(pick(tag.name, locale), pick(tag.where, locale))}>
       {ticks.map((v) => (
         <g key={v}>
           <line x1={PL} x2={W - PR} y1={py(v)} y2={py(v)} stroke="currentColor" strokeOpacity="0.08" />
@@ -167,7 +188,7 @@ function EnsemblePanel({ tag }: { tag: FlatTag }) {
     <figure className="border border-border dark:border-white/10 bg-muted/30 dark:bg-white/[0.03]">
       <figcaption className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-border dark:border-white/10">
         <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-          {e.title} · {pick(tag.asset, locale)} · {pick(tag.name, locale)}
+          {e.title} · {pick(tag.fullPath, locale)} · {pick(tag.name, locale)}
         </span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           {e.scale}
@@ -373,7 +394,6 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
                 dark={dark}
                 motionOK={motionOK}
                 replay={{ tRef, tagId: REPLAY_TAG_ID }}
-                intro={false}
                 dpr={[1, 1.5]}
                 frameloop={motionOK ? "always" : "demand"}
                 camera={{ position: [0, 0, 7.6], fov: 45 }}
@@ -381,7 +401,7 @@ function IncidentReplay({ dark, motionOK }: { dark: boolean; motionOK: boolean }
               />
             )}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <p className="font-display text-[10px] font-extrabold tracking-[0.2em]">{COMPANY}</p>
+              <p className="font-display text-[10px] font-extrabold tracking-[0.2em]">{COMPANY_NAME}</p>
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground leading-5 mt-2">{r.caption}</p>
@@ -451,14 +471,7 @@ export function BannerSunburst({ className }: { className?: string }) {
   const dark = resolvedTheme !== "light"
   return (
     <div className={className} aria-hidden>
-      <SunburstCanvas
-        dark={dark}
-        motionOK
-        selected={DEFAULT_TAG}
-        intro={false}
-        dpr={[1, 2]}
-        style={{ pointerEvents: "none" }}
-      />
+      <SunburstCanvas dark={dark} motionOK selected={DEFAULT_TAG} dpr={[1, 2]} style={{ pointerEvents: "none" }} />
     </div>
   )
 }
@@ -478,31 +491,82 @@ export default function AssetMonitorDemo() {
   const { resolvedTheme } = useTheme()
   const dark = resolvedTheme !== "light"
   const motionOK = useMotionOK()
+  const [focusId, setFocusId] = useState<string>(ROOT_ID)
   const [selectedId, setSelectedId] = useState(DEFAULT_TAG)
   const labelRefs = useRef(new Map<string, HTMLDivElement | null>())
   // o sunburst só gira (e se constrói) quando está em tela — nada de GPU à toa
   const stageRef = useRef<HTMLDivElement>(null)
   const stageInView = useInView(stageRef, { margin: "-40px" })
 
+  const focusNode = getNode(focusId) ?? TREE
+  const focusChildren = useMemo(() => childrenOf(focusNode), [focusNode])
+  const trail = useMemo(() => pathTo(focusId), [focusId])
+  const parentId = INDEX.get(focusId)?.parentId ?? null
+
+  // descer um nível mantendo (ou reposicionando) a tag selecionada
+  const drill = useCallback((id: string) => {
+    setFocusId(id)
+    setSelectedId((current) => {
+      const inside = current === id || INDEX.get(current)?.ancestors.includes(id)
+      if (inside) return current
+      return worstTagIn(id)?.id ?? current
+    })
+  }, [])
+
   const tag = ALL_TAGS.find((x) => x.id === selectedId) ?? ALL_TAGS[0]
   const deviation = ((tag.real - tag.pred) / tag.pred) * 100
   const d = t.demo
 
+  const childKind = (focusChildren[0]?.kind ?? "tag") as Exclude<NodeKind, "company">
+  const childCount = focusChildren.length
+  const tagsInFocus = tagCountOf(focusId)
+  const centerCounts =
+    childKind === "tag"
+      ? d.counts(childCount, d.levels.tag)
+      : `${d.counts(childCount, d.levels[childKind])} · ${d.counts(tagsInFocus, d.levels.tag)}`
+  const visibleLevels = LEVEL_ORDER.slice(LEVEL_ORDER.length - Math.max(1, (focusNode.kind === "company" ? 4 : focusNode.kind === "asset" ? 3 : focusNode.kind === "class" ? 2 : 1)))
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sunburst */}
+        {/* Sunburst navegável */}
         <Reveal>
           <div className="relative border border-border dark:border-white/10 bg-muted/30 dark:bg-white/[0.03] h-full flex flex-col">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border dark:border-white/10">
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{d.hierarchy}</p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground hidden sm:block">{d.clickTag}</p>
+            {/* breadcrumb + dica */}
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3 border-b border-border dark:border-white/10">
+              <nav className="flex flex-wrap items-center gap-x-1.5 gap-y-1" aria-label={d.hierarchy}>
+                {trail.map((node, i) => {
+                  const last = i === trail.length - 1
+                  return (
+                    <span key={node.id} className="inline-flex items-center gap-1.5">
+                      {i > 0 && <span className="font-mono text-[10px] text-muted-foreground/60">›</span>}
+                      {last ? (
+                        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground font-bold">
+                          {pick(node.name, locale)}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => drill(node.id)}
+                          className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        >
+                          {pick(node.name, locale)}
+                        </button>
+                      )}
+                    </span>
+                  )
+                })}
+              </nav>
+              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground hidden sm:block">
+                {d.drillHint}
+              </p>
             </div>
 
             <div ref={stageRef} className="relative flex-1 min-h-[360px] md:min-h-[430px] select-none">
               <SunburstCanvas
                 dark={dark}
                 motionOK={motionOK}
+                focusId={focusId}
+                onFocus={drill}
                 selected={selectedId}
                 onSelect={setSelectedId}
                 interactive
@@ -511,15 +575,54 @@ export default function AssetMonitorDemo() {
                 frameloop={stageInView ? "always" : "demand"}
                 labelRefs={labelRefs}
               />
-              <AssetHealthLabels dark={dark} labelRefs={labelRefs} />
+              <RingLabels nodes={focusChildren} dark={dark} labelRefs={labelRefs} />
+
+              {/* centro: nó em foco + voltar um nível */}
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="text-center bg-background/60 backdrop-blur-[2px] px-3 py-1.5">
-                  <p className="font-display text-[11px] md:text-xs font-extrabold tracking-[0.2em]">{COMPANY}</p>
-                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
-                    {d.assetsTags(ASSETS.length, ALL_TAGS.length)}
-                  </p>
-                </div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={focusId}
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.06 }}
+                    transition={{ duration: 0.22 }}
+                    className="text-center bg-background/70 backdrop-blur-[2px] px-3 py-1.5 max-w-[60%]"
+                  >
+                    <p className="font-display text-[11px] md:text-xs font-extrabold tracking-[0.2em] leading-tight">
+                      {pick(focusNode.name, locale).toUpperCase()}
+                    </p>
+                    <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
+                      {centerCounts}
+                    </p>
+                    {parentId && (
+                      <button
+                        onClick={() => drill(parentId)}
+                        className="pointer-events-auto mt-1.5 inline-flex items-center gap-1.5 border border-border dark:border-white/15 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground transition-colors cursor-pointer"
+                      >
+                        <CornerLeftUp size={10} />
+                        {d.back}
+                      </button>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
+            </div>
+
+            {/* anéis visíveis — a classe de cada nível */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-2.5 border-t border-border dark:border-white/10">
+              {LEVEL_ORDER.map((level, i) => {
+                const on = visibleLevels.includes(level)
+                return (
+                  <span key={level} className="inline-flex items-center gap-2">
+                    {i > 0 && <span className="font-mono text-[9px] text-muted-foreground/50">→</span>}
+                    <span
+                      className={`font-mono text-[9px] uppercase tracking-[0.2em] ${on ? "text-foreground" : "text-muted-foreground/40 line-through"}`}
+                    >
+                      {d.levels[level]}
+                    </span>
+                  </span>
+                )
+              })}
             </div>
 
             {/* Painel da tag selecionada — predição × real */}
@@ -535,7 +638,7 @@ export default function AssetMonitorDemo() {
                 <div>
                   <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground mb-1">{d.panel.tag}</p>
                   <p className="text-sm font-bold leading-tight">{pick(tag.name, locale)}</p>
-                  <p className="text-[11px] text-muted-foreground">{pick(tag.asset, locale)}</p>
+                  <p className="text-[11px] text-muted-foreground">{pick(tag.where, locale)}</p>
                 </div>
                 <div>
                   <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground mb-1">{d.panel.pred}</p>
@@ -579,7 +682,7 @@ export default function AssetMonitorDemo() {
           <figure className="border border-border dark:border-white/10 bg-muted/30 dark:bg-white/[0.03] h-full flex flex-col">
             <figcaption className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border dark:border-white/10">
               <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                {pick(tag.asset, locale)} · {pick(tag.name, locale)}
+                {pick(tag.where, locale)} · {pick(tag.name, locale)}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
@@ -610,3 +713,7 @@ export default function AssetMonitorDemo() {
     </div>
   )
 }
+
+/* reexport para as pranchetas de marketing */
+export { ASSETS }
+export type { TagNode }

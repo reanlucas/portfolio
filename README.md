@@ -41,9 +41,11 @@ quem fica responsável pelo resultado.
 
 O site demonstra, com dados e animações, o tipo de sistema que eu construo:
 
-- **Sunburst 3D interativo de risco de ativos** — hierarquia empresa → ativo → equipamento → tag,
-  em metal escovado com reflexos reais, varredura de radar e arrasto com inércia. Clique numa tag
-  e veja a predição do modelo contra o valor real do sensor, com o desvio calculado na hora.
+- **Sunburst 3D navegável de risco de ativos** — a árvore inteira em cinco níveis: empresa →
+  ativo (UHEs e SEs) → classe de equipamento (gerador, sistema de resfriamento, banco de
+  capacitores…) → equipamento → tag. Clique num anel e ele vira o centro, reabrindo a subárvore;
+  clique numa tag e veja a predição do modelo contra o valor real do sensor. Metal escovado com
+  reflexos reais, varredura de radar e arrasto com inércia.
 - **Predição × real** — gráficos com envelope de normalidade aprendido por redes neurais
   (RNN/LSTM, CNN, autoencoders), destacando os pontos onde o sensor foge do previsto.
 - **Ensemble de detecção** — a anomalia só vira alerta quando ML clássico (Random Forest, KNN)
@@ -72,7 +74,7 @@ src/
   i18n/                config de locale + dicionários pt/en
   components/viz/      sunburst 3D, telemetria, agente
   components/home/     hero, risco, proposta de valor FDE, skills
-  lib/assetData.ts     dados ilustrativos bilíngues da plataforma
+  lib/assetData.ts     árvore ilustrativa bilíngue (5 níveis) da plataforma
 ```
 
 Rotas públicas:
