@@ -70,7 +70,7 @@ export default function BannerBoard() {
             <div className="relative flex-1 min-h-0">
               <BannerSunburst className="absolute inset-0" />
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
+                <div className="text-center bg-[#0d0d0d]/80 px-3 py-1.5">
                   <p className="font-display text-[10px] font-extrabold tracking-[0.2em]">ENERGIA S.A.</p>
                   <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-white/50">
                     {ASSETS.length} ativos · {EQUIPMENT_COUNT} equipamentos · {ALL_TAGS.length} tags

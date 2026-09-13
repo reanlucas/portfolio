@@ -34,7 +34,7 @@ export default function CoverBoard() {
         {/* texto — centro-direita, acima da zona do avatar */}
         <div className="absolute left-[430px] top-1/2 -translate-y-1/2 max-w-[660px]">
           <p className="font-mono text-[12px] tracking-[0.4em] uppercase text-white/55 mb-3">
-            Forward Deployed Engineer · IA em infraestrutura crítica
+            Forward Deployed Engineer · Setor elétrico
           </p>
           <h1 className="font-display text-[58px] leading-[0.95] font-extrabold tracking-tight uppercase mb-4">
             IA em produção.<br />Dentro da operação.
