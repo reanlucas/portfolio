@@ -1,5 +1,6 @@
 import Hero from "@/components/home/hero";
 import RiskShowcase from "@/components/home/riskShowcase";
+import FdeValue from "@/components/home/fdeValue";
 import SkillsMarquee from "@/components/home/skillsMarquee";
 import AboutMe from "@/components/aboutMe";
 import Footer from "@/components/footer";
@@ -11,6 +12,7 @@ export default function Home() {
     <>
       <Hero />
       <RiskShowcase />
+      <FdeValue />
       <SkillsMarquee />
       <AboutMe />
       <div id="projects"><Projects /></div>

@@ -3,22 +3,12 @@
 import { motion } from "motion/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, UserRound, BrainCircuit, Mail } from "lucide-react"
+import { Home, UserRound, BrainCircuit, Mail, Languages } from "lucide-react"
 import { FaGithub, FaLinkedin, FaWhatsapp } from "react-icons/fa"
 import ThemeButton from "@/components/changeThemeButton"
 import { githubProfileLink, linkedinProfileLink, whatsappLink } from "@/lib/socialMediaLinks"
-
-const pages = [
-  { href: "/", label: "Início", Icon: Home },
-  { href: "/sobre", label: "Sobre mim", Icon: UserRound },
-  { href: "/projetos", label: "Projetos", Icon: BrainCircuit },
-]
-
-const socials = [
-  { href: githubProfileLink, label: "GitHub", Icon: FaGithub },
-  { href: linkedinProfileLink, label: "LinkedIn", Icon: FaLinkedin },
-  { href: whatsappLink, label: "WhatsApp", Icon: FaWhatsapp },
-]
+import { useLocale } from "@/i18n/context"
+import { localizedHref, routeKeyFromPath, type RouteKey } from "@/i18n/config"
 
 function NavIcon({
   href,
@@ -75,12 +65,67 @@ function NavIcon({
   )
 }
 
+/** Troca de idioma mantendo a página atual. */
+function LanguageSwitch({ compact }: { compact?: boolean }) {
+  const { locale, t } = useLocale()
+  const pathname = usePathname()
+  const other = locale === "pt" ? "en" : "pt"
+  const target = localizedHref(other, routeKeyFromPath(pathname))
+  return (
+    <Link
+      href={target}
+      hrefLang={other === "pt" ? "pt-BR" : "en"}
+      aria-label={t.nav.switchTo}
+      title={t.nav.switchTo}
+      className="group relative flex items-center justify-center"
+    >
+      <motion.span
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.92 }}
+        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        className="relative z-10 flex h-10 w-10 items-center justify-center gap-1 border border-border dark:border-white/15
+          text-muted-foreground hover:text-foreground hover:border-foreground transition-colors duration-200"
+      >
+        {compact ? (
+          <span className="font-mono text-[11px] font-bold tracking-widest">{t.nav.switchShort}</span>
+        ) : (
+          <>
+            <Languages size={14} strokeWidth={2.2} />
+            <span className="font-mono text-[10px] font-bold tracking-widest">{t.nav.switchShort}</span>
+          </>
+        )}
+      </motion.span>
+      <span
+        className="pointer-events-none absolute left-full ml-3 hidden whitespace-nowrap border border-border
+          dark:border-white/10 bg-background/95 px-2.5 py-1 font-mono text-[11px] uppercase tracking-widest opacity-0 shadow-lg backdrop-blur
+          transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 -translate-x-1 md:block"
+      >
+        {t.nav.switchTo}
+      </span>
+    </Link>
+  )
+}
+
 export default function SideNav() {
   const pathname = usePathname()
+  const { t, href } = useLocale()
+  const current = routeKeyFromPath(pathname)
+
+  const pages: { key: RouteKey; label: string; Icon: typeof Home }[] = [
+    { key: "home", label: t.nav.home, Icon: Home },
+    { key: "about", label: t.nav.about, Icon: UserRound },
+    { key: "projects", label: t.nav.projects, Icon: BrainCircuit },
+  ]
+
+  const socials = [
+    { href: githubProfileLink, label: t.nav.github, Icon: FaGithub },
+    { href: linkedinProfileLink, label: t.nav.linkedin, Icon: FaLinkedin },
+    { href: whatsappLink, label: t.nav.whatsapp, Icon: FaWhatsapp },
+  ]
 
   const pageItems = (layoutGroup: string) =>
-    pages.map(({ href, label, Icon }) => (
-      <NavIcon key={href} href={href} label={label} active={pathname === href} layoutGroup={layoutGroup}>
+    pages.map(({ key, label, Icon }) => (
+      <NavIcon key={key} href={href(key)} label={label} active={current === key} layoutGroup={layoutGroup}>
         <Icon size={19} strokeWidth={2.2} />
       </NavIcon>
     ))
@@ -101,7 +146,7 @@ export default function SideNav() {
         className="fixed left-0 top-0 z-50 hidden h-dvh w-[68px] flex-col items-center border-r
           border-border dark:border-white/10 bg-background/70 py-5 backdrop-blur-xl md:flex"
       >
-        <Link href="/" aria-label="Início" className="mb-6">
+        <Link href={href("home")} aria-label={t.nav.logoLabel} className="mb-6">
           <motion.span
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
@@ -116,9 +161,13 @@ export default function SideNav() {
 
         <div className="my-4 h-px w-8 bg-border dark:bg-white/10" />
 
-        <NavIcon href="/#contact" label="Contato">
+        <NavIcon href={href("contact")} label={t.nav.contact}>
           <Mail size={19} strokeWidth={2.2} />
         </NavIcon>
+
+        <div className="mt-3">
+          <LanguageSwitch />
+        </div>
 
         <div className="mt-auto flex flex-col items-center gap-1.5">
           {socialItems}
@@ -138,9 +187,10 @@ export default function SideNav() {
       >
         {pageItems("dock")}
         <div className="mx-1 h-6 w-px bg-border dark:bg-white/10" />
-        <NavIcon href={githubProfileLink} label="GitHub" external>
+        <NavIcon href={githubProfileLink} label={t.nav.github} external>
           <FaGithub size={18} />
         </NavIcon>
+        <LanguageSwitch compact />
         <ThemeButton />
       </motion.nav>
     </>

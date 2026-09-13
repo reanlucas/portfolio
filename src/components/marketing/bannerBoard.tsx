@@ -1,6 +1,7 @@
 "use client"
 
-import { BannerSunburst, TagChart, ALL_TAGS, ASSETS, EQUIPMENT_COUNT, DEFAULT_TAG, detectorScores, DETECTORS } from "@/components/projetos/assetMonitorDemo"
+import { BannerSunburst, TagChart } from "@/components/projetos/assetMonitorDemo"
+import { ALL_TAGS, ASSETS, EQUIPMENT_COUNT, DEFAULT_TAG, detectorScores, DETECTORS } from "@/lib/assetData"
 
 /*
   Prancheta 1200×627 (proporção de post do LinkedIn) — visão completa da
@@ -34,7 +35,7 @@ export default function BannerBoard() {
         <div className="flex items-end justify-between gap-6 px-8 pt-6 pb-4 border-b border-white/10">
           <div>
             <p className="font-mono text-[10px] tracking-[0.35em] uppercase text-white/50 mb-1.5">
-              Deep learning em produção · Setor elétrico · UHEs e subestações
+              Forward Deployed Engineer · Setor elétrico · UHEs e subestações
             </p>
             <h1 className="font-display text-[30px] leading-none font-extrabold tracking-tight uppercase">
               Plataforma de Gestão de Ativos e Riscos
@@ -88,7 +89,7 @@ export default function BannerBoard() {
             {/* Painel da tag */}
             <div className="grid grid-cols-4 border-t border-white/10 divide-x divide-white/10">
               {[
-                ["Tag", `${tag.name}`, tag.asset],
+                ["Tag", tag.name.pt, tag.asset.pt],
                 ["Predição", `${tag.pred}${tag.unit}`, "modelo"],
                 ["Real", `${tag.real}${tag.unit}`, "sensor"],
                 ["Desvio", `+${deviation.toFixed(1)}%`, "crítico"],
@@ -108,7 +109,7 @@ export default function BannerBoard() {
           <div className="col-span-5 flex flex-col min-h-0">
             <div className="flex items-center justify-between px-5 pt-3">
               <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-white/50">
-                {tag.asset} · {tag.name} — predição × real
+                {tag.asset.pt} · {tag.name.pt} — predição × real
               </p>
               <span className="font-mono text-[9px] uppercase tracking-widest text-white/60 flex items-center gap-3">
                 <span className="flex items-center gap-1"><svg width="14" height="2"><line x1="0" x2="14" y1="1" y2="1" stroke="currentColor" strokeWidth="2" /></svg>real</span>
@@ -152,7 +153,7 @@ export default function BannerBoard() {
             ))}
           </div>
           <span className="font-display text-[11px] font-extrabold tracking-tight uppercase whitespace-nowrap">
-            Rean Lucas · Redes Neurais em Produção
+            Rean Lucas · Forward Deployed Engineer
           </span>
         </div>
       </div>

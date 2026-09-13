@@ -3,20 +3,7 @@
 import { Marquee, SectionTitle } from "@/components/motion/primitives"
 import { MidNeuralLeft, MidNeuralRight } from "@/components/neuralDecor"
 import { Separator } from "@/components/ui/separator"
-
-const rowA = [
-  "Redes Neurais", "LSTM", "AutoEncoders", "Transformers", "CNNs",
-  "Random Forest", "KNN", "PyTorch", "Risco de Ativos", "KPIs",
-  "Data Science", "Python", "Machine Learning", "LLMs", "Vertex AI",
-  "Agentes de IA", "NumPy", "Flask", "Plotly",
-]
-
-const rowB = [
-  "Google Cloud", "AlloyDB", "Terraform", "Infraestrutura", "DevOps",
-  "Docker", "Linux", "Keycloak", "Denodo", "Data Lakes", "NEXT.JS",
-  "TypeScript", "PostgreSQL", "Oracle SQL", "SAP", "Hitachi NM",
-  "Prot. Industriais", "OCP / ICCP", "Web Apis", "Ui / Ux", "C++",
-]
+import { useT } from "@/i18n/context"
 
 function Chip({ text }: { text: string }) {
   return (
@@ -31,6 +18,7 @@ function Chip({ text }: { text: string }) {
 }
 
 export default function SkillsMarquee() {
+  const t = useT()
   return (
     <section className="relative py-10 overflow-hidden">
       <MidNeuralLeft className="absolute -left-10 top-0 w-72 md:w-[26rem] dark:opacity-[0.18] opacity-[0.24] pointer-events-none" />
@@ -39,16 +27,16 @@ export default function SkillsMarquee() {
       <Separator orientation="horizontal" className="max-w-[90vw] m-auto dark:bg-white/20 bg-black/10 mb-10" />
 
       <div className="max-w-7xl mx-auto px-6">
-        <SectionTitle index="02" overline="Stack" title="Arsenal técnico" className="mb-8" />
+        <SectionTitle index="03" overline={t.skills.overline} title={t.skills.title} className="mb-8" />
       </div>
 
       {/* Duas esteiras em sentidos opostos — IA numa, engenharia na outra */}
       <div className="flex flex-col gap-3">
         <Marquee speed={42} direction={1} className="py-1">
-          {rowA.map((t) => <Chip key={t} text={t} />)}
+          {t.skills.rowA.map((s) => <Chip key={s} text={s} />)}
         </Marquee>
         <Marquee speed={34} direction={-1} className="py-1">
-          {rowB.map((t) => <Chip key={t} text={t} />)}
+          {t.skills.rowB.map((s) => <Chip key={s} text={s} />)}
         </Marquee>
       </div>
     </section>

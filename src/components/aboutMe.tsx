@@ -17,176 +17,32 @@ import { Marquee, Reveal, RevealGroup, RevealItem, SectionTitle } from "@/compon
 import TelemetryStrip from "@/components/viz/telemetryStrip"
 import { githubProfileLink, linkedinProfileLink, whatsappLink } from "@/lib/socialMediaLinks";
 import { ArrowRight } from "lucide-react";
+import { useLocale } from "@/i18n/context";
 
-type SkillItem = {
-  icon: ComponentType<{ size?: number | string; className?: string }>
-  label: string
-  text: string
-}
+type IconType = ComponentType<{ size?: number | string; className?: string }>
 
-const skills: SkillItem[] = [
-  {
-    icon: FaLinux,
-    label: "Linux",
-    text: "Entusiasta de sistemas Linux, mas alterno todo dia entre windows e linux.",
-  },
-  {
-    icon: FaNodeJs,
-    label: "Node.js",
-    text: "Runtime JavaScript server-side amplamente utilizado para APIs, microsserviços e ferramentas CLI. Aposentei para ficar no Python World.",
-  },
-  {
-    icon: SiTypescript,
-    label: "TypeScript",
-    text: "Superset tipado de JavaScript que uso como linguagem principal em projetos web. Tipos estáticos eliminam classes inteiras de bugs em runtime.",
-  },
-  {
-    icon: SiPostgresql,
-    label: "PostgreSQL",
-    text: "Banco de dados relacional open source que eu toco em alguns projetos. Confiável, extensível e com suporte robusto a JSON, índices avançados e transações.",
-  },
-  {
-    icon: FaDocker,
-    label: "Docker",
-    text: "Containerização de aplicações e bancos de dados para ambientes reprodutíveis em desenvolvimento e produção. Um need to have hoje em dia.",
-  },
-  {
-    icon: FaGit,
-    label: "Git",
-    text: "Controle de versão distribuído utilizado em 100% dos meus projetos. Branching strategies, rebase, cherry-pick e gestão de conflitos.",
-  },
-  {
-    icon: FaPython,
-    label: "Python",
-    text: "Linguagem principal para data science, machine learning e automação. Uso em pipelines de dados, treinamento de modelos e back-end com Flask.",
-  },
-  {
-    icon: FaBrain,
-    label: "Machine Learning",
-    text: "Implementação de modelos supervisionados e não-supervisionados: LSTM Autoencoder, Random Forest, regressão e clustering para análise preditiva.",
-  },
-  {
-    icon: SiReact,
-    label: "React / Next.js",
-    text: "Ecossistema JS/TS completo: React para interfaces reativas e componentização, Next.js para SSR/SSG, roteamento server-side e API routes integradas. Aposentei para o Python World",
-  },
-  {
-    icon: FaChartBar,
-    label: "Data Science",
-    text: "Análise exploratória, visualização de dados, feature engineering e modelagem estatística para extração de insights a partir de datasets reais.",
-  },
-  {
-    icon: FaCogs,
-    label: "DevOps",
-    text: "Pipelines CI/CD, gestão de infraestrutura como código, automação de deploys e monitoramento de sistemas em ambientes de produção.",
-  },
-  {
-    icon: SiCplusplus,
-    label: "C++",
-    text: "Linguagem para sistemas embarcados, drivers e aplicações com requisitos críticos de performance. Base sólida em ponteiros, memória e STL. Já brinquei mas não uso profissionalmente",
-  },
-  {
-    icon: FaPaintBrush,
-    label: "UI / UX",
-    text: "Design de interfaces centrado no usuário, prototipagem, sistemas de design e implementação de layouts responsivos e acessíveis.",
-  },
-  {
-    icon: FaGlobe,
-    label: "Web APIs",
-    text: "Desenvolvimento e consumo de APIs RESTful com autenticação JWT, versionamento de endpoints, rate limiting e documentação OpenAPI.",
-  },
-  {
-    icon: FaDatabase,
-    label: "Oracle SQL",
-    text: "Banco de dados relacional corporativo amplamente utilizado em ambientes industriais e integrado ao SAP. Experiência com queries complexas e PL/SQL.",
-  },
-  {
-    icon: FaRobot,
-    label: "I.A",
-    text: "Aplicação de algoritmos de inteligência artificial para automação de decisões, previsão de falhas, reconhecimento de padrões e otimização de processos.",
-  },
-  {
-    icon: FaSitemap,
-    label: "Redes Neurais",
-    text: "Arquiteturas de deep learning: feedforward, CNN, RNN e suas variantes. Treinamento, regularização, otimização e avaliação de modelos em PyTorch.",
-  },
-  {
-    icon: FaLayerGroup,
-    label: "AutoEncoders",
-    text: "Redes encoder-decoder para aprendizado não-supervisionado de representações latentes. Aplicadas em compressão de dados e detecção de anomalias por erro de reconstrução.",
-  },
-  {
-    icon: FaHistory,
-    label: "LSTM",
-    text: "Long Short-Term Memory para modelagem de dependências temporais longas em séries temporais multivariadas — vibração, temperatura e corrente elétrica.",
-  },
-  {
-    icon: SiSap,
-    label: "SAP",
-    text: "Experiência com integração e operação de módulos SAP em ambientes industriais e corporativos, incluindo consulta e extração de dados.",
-  },
-  {
-    icon: FaIndustry,
-    label: "Prot. Industriais",
-    text: "Protocolos de comunicação industrial: Modbus, DNP3, IEC 61850 e outros padrões de automação utilizados em sistemas SCADA e subestações.",
-  },
-  {
-    icon: FaNetworkWired,
-    label: "HTTP",
-    text: "Domínio completo do protocolo HTTP/HTTPS: métodos, headers, status codes, cache, CORS, REST e WebSockets para comunicação em tempo real.",
-  },
-  {
-    icon: FaPlug,
-    label: "OCP / ICCP",
-    text: "Inter-Control Center Communications Protocol (ICCP/TASE.2) para interoperabilidade entre centros de controle em redes de energia elétrica e sistemas SCADA.",
-  },
-  {
-    icon: SiGooglecloud,
-    label: "Google Cloud",
-    text: "Cloud para treino e serving de modelos: computação, storage, redes e IAM. Ambientes que nascem reprodutíveis e escalam quando o dado cresce.",
-  },
-  {
-    icon: SiTerraform,
-    label: "Terraform",
-    text: "Infraestrutura como código: ambientes inteiros versionados, revisáveis em PR e recriáveis com um apply. Clicar em console não é processo, é acidente.",
-  },
-  {
-    icon: FaServer,
-    label: "Infraestrutura",
-    text: "Provisionamento, redes, VMs, observabilidade e hardening. A fundação que decide se o modelo em produção dorme tranquilo ou acorda a equipe às 3h.",
-  },
-  {
-    icon: FaProjectDiagram,
-    label: "Transformers",
-    text: "Arquiteturas de atenção para dependências longas em séries temporais multivariadas — onde a LSTM satura, a atenção continua enxergando.",
-  },
-  {
-    icon: FaThLarge,
-    label: "CNNs",
-    text: "Redes convolucionais para padrões espaciais e espectrais: assinaturas de vibração viram mapas que a rede aprende a ler canal por canal.",
-  },
-  {
-    icon: FaExclamationTriangle,
-    label: "Risco de Ativos",
-    text: "Tradução da saída do modelo em risco acionável: score por componente, hierarquia usina → equipamento → componente e priorização de manutenção.",
-  },
-  {
-    icon: FaTachometerAlt,
-    label: "KPIs",
-    text: "Métricas que executivos leem: disponibilidade, antecipação de falha, custo evitado. O modelo só vale pelo indicador que ele move.",
-  },
+// Ícones na mesma ordem das skills do dicionário.
+const SKILL_ICONS: IconType[] = [
+  FaLinux, FaNodeJs, SiTypescript, SiPostgresql, FaDocker, FaGit, FaPython, FaBrain, SiReact, FaChartBar,
+  FaCogs, SiCplusplus, FaPaintBrush, FaGlobe, FaDatabase, FaRobot, FaSitemap, FaLayerGroup, FaHistory, SiSap,
+  FaIndustry, FaNetworkWired, FaPlug, SiGooglecloud, SiTerraform, FaServer, FaProjectDiagram, FaThLarge,
+  FaExclamationTriangle, FaTachometerAlt,
 ]
 
+const DEFAULT_SKILL_INDEX = 16 // Redes Neurais / Neural Networks
+
 export default function AboutMe() {
-  const [activeTab, setActiveTab] = useState("Redes Neurais")
+  const { t, href } = useLocale()
+  const skills = t.about.skills.map((s, i) => ({ ...s, icon: SKILL_ICONS[i] ?? FaBrain }))
+  const [activeTab, setActiveTab] = useState(skills[DEFAULT_SKILL_INDEX].label)
 
   const socialLinks = [
-    { Icon: FaLinkedin, label: "LinkedIn", href: linkedinProfileLink },
-    { Icon: FaGithub, label: "GitHub", href: githubProfileLink },
-    { Icon: FaWhatsapp, label: "WhatsApp — (41) 9 8474-8437", href: whatsappLink },
+    { Icon: FaLinkedin, label: t.nav.linkedin, href: linkedinProfileLink },
+    { Icon: FaGithub, label: t.nav.github, href: githubProfileLink },
+    { Icon: FaWhatsapp, label: t.about.whatsappLabel, href: whatsappLink },
   ]
 
-  const active = skills.find((s) => s.label === activeTab) ?? skills[0]
+  const active = skills.find((s) => s.label === activeTab) ?? skills[DEFAULT_SKILL_INDEX]
 
   return (
     <div className="overflow-hidden relative">
@@ -196,23 +52,19 @@ export default function AboutMe() {
       <LSTMNeural className="absolute left-1/3 top-1/2 w-56 md:w-80 dark:opacity-[0.14] opacity-[0.18] pointer-events-none" />
 
       <div className="w-full max-w-7xl p-6 mx-auto flex flex-col gap-8 relative">
-        <SectionTitle index="03" overline="Perfil" title="Sobre Mim" />
+        <SectionTitle index="04" overline={t.about.overline} title={t.about.title} />
 
         {/* Bio + Social Links */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Reveal className="md:col-span-2">
             <div className="h-full rounded-none border border-border dark:border-white/10 p-6 bg-muted/40 dark:bg-white/5 leading-8 text-muted-foreground">
-              <p className="mb-4">
-                Engenheiro de machine learning full-stack no setor elétrico. Construo de ponta a ponta o sistema de manutenção preditiva de uma das maiores companhias de energia do Brasil: deep learning sobre telemetria de UHEs e subestações, integração SCADA/SAP e nuvem GCP.
-              </p>
-              <p className="mb-5">
-                O resultado: falha antecipada com dias de folga, manutenção que vira agenda em vez de emergência e indicadores que executivo lê — disponibilidade, custo evitado, risco por ativo. Do zero ao deploy.
-              </p>
+              <p className="mb-4">{t.about.bio1}</p>
+              <p className="mb-5">{t.about.bio2}</p>
               <Link
-                href="/sobre"
+                href={href("about")}
                 className="group inline-flex items-center gap-2 font-medium text-sm text-foreground hover:underline underline-offset-4"
               >
-                Ler a história completa
+                {t.about.more}
                 <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
             </div>
@@ -236,12 +88,11 @@ export default function AboutMe() {
           </RevealGroup>
         </div>
 
-        {/* Telemetria ilustrativa — o dado bruto que alimenta os modelos */}
         <Reveal>
           <TelemetryStrip />
         </Reveal>
 
-        {/* Esteira de skills — Motion Marquee, clicável, pausa no hover */}
+        {/* Esteira de skills — clicável, pausa no hover */}
         <Reveal>
           <Marquee speed={30} className="py-2">
             {skills.map(({ icon: Icon, label }) => (

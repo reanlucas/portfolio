@@ -34,14 +34,14 @@ export default function CoverBoard() {
         {/* texto — centro-direita, acima da zona do avatar */}
         <div className="absolute left-[430px] top-1/2 -translate-y-1/2 max-w-[660px]">
           <p className="font-mono text-[12px] tracking-[0.4em] uppercase text-white/55 mb-3">
-            Machine Learning Engineer · Setor Elétrico
+            Forward Deployed Engineer · IA em infraestrutura crítica
           </p>
           <h1 className="font-display text-[58px] leading-[0.95] font-extrabold tracking-tight uppercase mb-4">
-            Redes neurais<br />em produção
+            IA em produção.<br />Dentro da operação.
           </h1>
           <p className="text-[17px] leading-6 text-white/70 mb-5 max-w-[600px]">
-            Deep learning que prevê falhas em UHEs e subestações antes da parada
-            não planejada — do sensor ao alerta.
+            Eu me instalo onde o problema mora e só saio quando o modelo está rodando,
+            integrado e vigiado — prevendo falhas em UHEs e subestações antes da parada.
           </p>
           <div className="flex flex-wrap gap-2">
             {chips.map((c) => (
